@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>AI函数测试</title>
+</head>
+<body>
+    <h1>AI解析函数测试</h1>
+    <button onclick="testFunction()">测试函数连接</button>
+    <pre id="result"></pre>
+
+    <script>
+        const SUPABASE_URL = 'https://usmsbiunhnzroqweyokh.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbXNiaXVuaG56cm9xd2V5b2toIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNDMzMzcsImV4cCI6MjA4NjcxOTMzN30.fwiHgsRc-7o0h6bn7YSpNxax05wn6hfgO4LTpEL5Tc8';
+
+        async function testFunction() {
+            const result = document.getElementById('result');
+            result.textContent = '测试中...\n';
+
+            try {
+                // 首先登录获取token
+                result.textContent += '1. 尝试登录...\n';
+
+                const loginResponse = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: '1659611051@qq.com',  // 替换为你的邮箱
+                        password: 'XIANGxiang'          // 替换为你的密码
+                    })
+                });
+
+                if (!loginResponse.ok) {
+                    const error = await loginResponse.json();
+                    result.textContent += `登录失败: ${JSON.stringify(error, null, 2)}\n\n`;
+                    result.textContent += '请在代码中修改邮箱和密码，或者你已经有登录token的话直接使用。\n';
+                    return;
+                }
+
+                const loginData = await loginResponse.json();
+                const token = loginData.access_token;
+                const userId = loginData.user.id;
+
+                result.textContent += `2. 登录成功! User ID: ${userId}\n`;
+                result.textContent += `3. Token: ${token.substring(0, 20)}...\n\n`;
+
+                // 获取一个已存在的item来测试
+                result.textContent += '4. 获取测试项目...\n';
+
+                const itemsResponse = await fetch(`${SUPABASE_URL}/rest/v1/items?select=*&limit=1`, {
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const items = await itemsResponse.json();
+
+                if (!items || items.length === 0) {
+                    result.textContent += '没有找到测试项目，请先在网页中添加一条内容。\n';
+                    return;
+                }
+
+                const testItemId = items[0].id;
+                result.textContent += `5. 找到测试项目 ID: ${testItemId}\n`;
+                result.textContent += `6. 项目内容: ${items[0].content || items[0].title}\n\n`;
+
+                // 调用AI解析函数
+                result.textContent += '7. 调用AI解析函数...\n';
+
+                const functionResponse = await fetch(`${SUPABASE_URL}/functions/v1/ai-parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'apikey': SUPABASE_KEY,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        itemId: testItemId,
+                        userId: userId
+                    })
+                });
+
+                result.textContent += `8. 响应状态: ${functionResponse.status} ${functionResponse.statusText}\n`;
+
+                if (!functionResponse.ok) {
+                    const errorText = await functionResponse.text();
+                    result.textContent += `9. 函数调用失败:\n${errorText}\n`;
+                    return;
+                }
+
+                const functionResult = await functionResponse.json();
+                result.textContent += `10. 成功! AI解析结果:\n${JSON.stringify(functionResult, null, 2)}\n`;
+
+            } catch (error) {
+                result.textContent += `\n错误: ${error.message}\n`;
+                result.textContent += `堆栈: ${error.stack}\n`;
+            }
+        }
+    </script>
+</body>
+</html>

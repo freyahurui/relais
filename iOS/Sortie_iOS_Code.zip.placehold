@@ -1,0 +1,1536 @@
+// ============================================
+// Sortie iOS Project - Core Code Files
+// ============================================
+// 按照文件夹结构创建以下文件
+// ============================================
+
+// MARK: - ===== Core/Supabase/ =====
+// FILE: Core/Supabase/SupabaseConfig.swift
+
+import Foundation
+
+enum SupabaseConfig {
+    /// Supabase Project URL
+    /// 在生产环境中应从环境变量或配置文件读取
+    static let supabaseURL = "YOUR_SUPABASE_URL"
+
+    /// Supabase Anonymous Key
+    /// 在生产环境中应从环境变量或配置文件读取
+    static let supabaseAnonKey = "YOUR_SUPABASE_ANON_KEY"
+
+    /// 验证配置
+    static func validate() -> Bool {
+        return !supabaseURL.isEmpty &&
+               !supabaseAnonKey.isEmpty &&
+               supabaseURL != "YOUR_SUPABASE_URL" &&
+               supabaseAnonKey != "YOUR_SUPABASE_ANON_KEY"
+    }
+}
+
+// ============================================
+// FILE: Core/Supabase/SupabaseClient.swift
+
+import Supabase
+import Foundation
+
+/// Supabase 客户端单例
+final class SupabaseManager {
+    static let shared = SupabaseManager()
+
+    let client: SupabaseClient
+
+    private init() {
+        guard SupabaseConfig.validate() else {
+            fatalError("""
+            ⚠️ Supabase 配置错误！
+            请在 SupabaseConfig.swift 中配置：
+            - supabaseURL
+            - supabaseAnonKey
+            """)
+        }
+
+        self.client = SupabaseClient(
+            supabaseURL: URL(string: SupabaseConfig.supabaseURL)!,
+            supabaseKey: SupabaseConfig.supabaseAnonKey,
+            options: .init(
+                global: .init(
+                    logger: SupabaseLogger()
+                )
+            )
+        )
+
+        print("✅ Supabase 初始化成功")
+    }
+
+    // MARK: - 便捷访问
+
+    /// Auth 控制器
+    var auth: AuthController {
+        client.auth
+    }
+
+    /// Database 查询构建器
+    func from(_ table: String) -> SupabaseQueryBuilder {
+        client.from(table)
+    }
+
+    /// Storage 客户端
+    var storage: SupabaseStorageClient {
+        client.storage
+    }
+
+    /// Realtime 客户端
+    var realtime: SupabaseRealtimeClient {
+        client.realtime
+    }
+
+    /// 当前用户 ID
+    var currentUserId: String? {
+        auth.currentUser?.id.uuidString
+    }
+
+    /// 检查是否已登录
+    var isAuthenticated: Bool {
+        auth.session != nil
+    }
+}
+
+// MARK: - Logger
+
+struct SupabaseLogger: SupabaseLoggerProtocol {
+    func log(message: SupabaseLogMessage) {
+        #if DEBUG
+        switch message.level {
+        case .error:
+            print("❌ Supabase Error: \(message.message)")
+        case .warning:
+            print("⚠️ Supabase Warning: \(message.message)")
+        case .info, .debug:
+            print("ℹ️ Supabase: \(message.message)")
+        }
+        #endif
+    }
+}
+
+// MARK: - 全局便捷访问
+
+extension SupabaseManager {
+    /// Auth 便捷访问
+    static var auth: AuthController {
+        shared.auth
+    }
+
+    /// 当前用户
+    static var currentUser: AuthUser? {
+        shared.auth.currentUser
+    }
+
+    /// 当前用户 ID
+    static var currentUserId: String? {
+        shared.currentUserId
+    }
+
+    /// 是否已登录
+    static var isAuthenticated: Bool {
+        shared.isAuthenticated
+    }
+}
+
+// ============================================
+// MARK: - ===== Models/ =====
+// FILE: Models/Models.swift
+
+import Foundation
+
+// MARK: - ItemType Enum
+
+enum ItemType: String, Codable, CaseIterable {
+    case inspiration = "inspiration"
+    case schedule = "schedule"
+    case todo = "todo"
+    case file = "file"
+    case notification = "notification"
+
+    var displayName: String {
+        switch self {
+        case .inspiration: return "灵感"
+        case .schedule: return "日程"
+        case .todo: return "待办"
+        case .file: return "文件"
+        case .notification: return "通知"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .inspiration: return "💡"
+        case .schedule: return "📅"
+        case .todo: return "✅"
+        case .file: return "📁"
+        case .notification: return "📬"
+        }
+    }
+}
+
+// MARK: - SourceType Enum
+
+enum SourceType: String, Codable {
+    case manual = "manual"
+    case aiParsed = "ai_parsed"
+    case shared = "shared"
+}
+
+// MARK: - Category Model
+
+struct Category: Codable, Identifiable, Equatable {
+    let id: UUID
+    let userId: UUID
+    var name: String
+    var emoji: String
+    var color: String
+    var sortOrder: Int
+    let isSystem: Bool
+    let createdAt: Date
+    var updatedAt: Date
+
+    // CodingKeys
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case emoji
+        case color
+        case sortOrder = "sort_order"
+        case isSystem = "is_system"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+
+    // 默认初始化
+    init(
+        id: UUID = UUID(),
+        userId: UUID,
+        name: String,
+        emoji: String,
+        color: String,
+        sortOrder: Int = 0,
+        isSystem: Bool = false
+    ) {
+        self.id = id
+        self.userId = userId
+        self.name = name
+        self.emoji = emoji
+        self.color = color
+        self.sortOrder = sortOrder
+        self.isSystem = isSystem
+        self.createdAt = Date()
+        self.updatedAt = Date()
+    }
+}
+
+// MARK: - Item Model
+
+struct Item: Codable, Identifiable, Equatable {
+    let id: UUID
+    let userId: UUID
+    let categoryId: UUID
+    let itemType: ItemType
+    var title: String
+    var content: String?
+    let sourceType: SourceType
+
+    // 日程字段
+    var scheduledStart: Date?
+    var scheduledEnd: Date?
+    var location: String?
+    var reminderSent: Bool
+    var appleEventId: String?
+    var calendarSynced: Bool
+
+    // 待办字段
+    var isCompleted: Bool
+    var completedAt: Date?
+
+    // 文件字段
+    var fileURL: String?
+    var fileType: String?
+    var fileSize: Int64?
+    var fileName: String?
+
+    // AI 字段
+    var aiParsedData: [String: Any]?
+    var confidenceScore: Double?
+
+    // 元数据
+    var metadata: [String: Any]?
+
+    // 时间戳
+    let createdAt: Date
+    var updatedAt: Date
+    var deletedAt: Date?
+
+    // 关联（查询时包含）
+    var category: Category?
+
+    // CodingKeys
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case categoryId = "category_id"
+        case itemType = "item_type"
+        case title
+        case content
+        case sourceType = "source_type"
+        case scheduledStart = "scheduled_start"
+        case scheduledEnd = "scheduled_end"
+        case location
+        case reminderSent = "reminder_sent"
+        case appleEventId = "apple_event_id"
+        case calendarSynced = "calendar_synced"
+        case isCompleted = "is_completed"
+        case completedAt = "completed_at"
+        case fileURL = "file_url"
+        case fileType = "file_type"
+        case fileSize = "file_size"
+        case fileName = "file_name"
+        case aiParsedData = "ai_parsed_data"
+        case confidenceScore = "confidence_score"
+        case metadata
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+        case category
+    }
+
+    // 自定义解码（处理 Any 类型）
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(UUID.self, forKey: .id)
+        userId = try container.decode(UUID.self, forKey: .userId)
+        categoryId = try container.decode(UUID.self, forKey: .categoryId)
+        itemType = try container.decode(ItemType.self, forKey: .itemType)
+        title = try container.decode(String.self, forKey: .title)
+        content = try container.decodeIfPresent(String.self, forKey: .content)
+        sourceType = try container.decodeIfPresent(SourceType.self, forKey: .sourceType) ?? .manual
+        scheduledStart = try container.decodeIfPresent(Date.self, forKey: .scheduledStart)
+        scheduledEnd = try container.decodeIfPresent(Date.self, forKey: .scheduledEnd)
+        location = try container.decodeIfPresent(String.self, forKey: .location)
+        reminderSent = try container.decodeIfPresent(Bool.self, forKey: .reminderSent) ?? false
+        appleEventId = try container.decodeIfPresent(String.self, forKey: .appleEventId)
+        calendarSynced = try container.decodeIfPresent(Bool.self, forKey: .calendarSynced) ?? false
+        isCompleted = try container.decodeIfPresent(Bool.self, forKey: .isCompleted) ?? false
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        fileURL = try container.decodeIfPresent(String.self, forKey: .fileURL)
+        fileType = try container.decodeIfPresent(String.self, forKey: .fileType)
+        fileSize = try container.decodeIfPresent(Int64.self, forKey: .fileSize)
+        fileName = try container.decodeIfPresent(String.self, forKey: .fileName)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        deletedAt = try container.decodeIfPresent(Date.self, forKey: .deletedAt)
+        category = try container.decodeIfPresent(Category.self, forKey: .category)
+
+        // 处理 JSONB 类型
+        if let aiData = try? container.decodeIfPresent([String: String].self, forKey: .aiParsedData) {
+            aiParsedData = aiData
+        } else {
+            aiParsedData = nil
+        }
+
+        if let meta = try? container.decodeIfPresent([String: String].self, forKey: .metadata) {
+            metadata = meta
+        } else {
+            metadata = nil
+        }
+
+        confidenceScore = try container.decodeIfPresent(Double.self, forKey: .confidenceScore)
+    }
+
+    // 简化的初始化
+    init(
+        id: UUID = UUID(),
+        userId: UUID,
+        categoryId: UUID,
+        itemType: ItemType,
+        title: String,
+        content: String? = nil
+    ) {
+        self.id = id
+        self.userId = userId
+        self.categoryId = categoryId
+        self.itemType = itemType
+        self.title = title
+        self.content = content
+        self.sourceType = .manual
+        self.scheduledStart = nil
+        self.scheduledEnd = nil
+        self.location = nil
+        self.reminderSent = false
+        self.appleEventId = nil
+        self.calendarSynced = false
+        self.isCompleted = false
+        self.completedAt = nil
+        self.fileURL = nil
+        self.fileType = nil
+        self.fileSize = nil
+        self.fileName = nil
+        self.aiParsedData = nil
+        self.confidenceScore = nil
+        self.metadata = nil
+        self.createdAt = Date()
+        self.updatedAt = Date()
+        self.deletedAt = nil
+        self.category = nil
+    }
+}
+
+// MARK: - UserProfile Model
+
+struct UserProfile: Codable, Equatable {
+    let id: UUID
+    var email: String?
+    var fullName: String?
+    var avatarURL: String?
+    var dataSyncEnabled: Bool
+    var calendarSyncEnabled: Bool
+    var analyticsEnabled: Bool
+    var createdAt: Date
+    var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case email
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case dataSyncEnabled = "data_sync_enabled"
+        case calendarSyncEnabled = "calendar_sync_enabled"
+        case analyticsEnabled = "analytics_enabled"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+// ============================================
+// MARK: - ===== Repositories/ =====
+// FILE: Repositories/AuthRepository.swift
+
+import Foundation
+import AuthenticationServices
+import Supabase
+
+@MainActor
+class AuthRepository: ObservableObject {
+    @Published var isAuthenticated = false
+    @Published var currentUser: AuthUser?
+    @Published var userProfile: UserProfile?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let supabase = SupabaseManager.shared.client
+
+    // MARK: - Check Auth State
+
+    func checkAuthState() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        // 检查现有 session
+        if let session = supabase.auth.session {
+            currentUser = session.user
+            isAuthenticated = true
+            await fetchUserProfile()
+            print("✅ 用户已登录: \(session.user.email ?? "")")
+        } else {
+            currentUser = nil
+            isAuthenticated = false
+            userProfile = nil
+            print("ℹ️ 用户未登录")
+        }
+    }
+
+    // MARK: - Sign In with Apple
+
+    func signInWithApple() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            // 创建 Apple ID 凭据请求
+            let appleIDProvider = ASAuthorizationAppleIDProvider()
+            let request = appleIDProvider.createRequest()
+            request.requestedScopes = [.fullName, .email]
+
+            // 执行请求
+            let result = try await withCheckedThrowingContinuation { continuation in
+                appleIDProvider.performRequest(for: request) { result in
+                    switch result {
+                    case .success(let authorization):
+                        continuation.resume(returning: .success(authorization))
+                    case .failure(let error):
+                        continuation.resume(returning: .failure(error))
+                    }
+                }
+            }
+
+            let authorization = try result.get()
+
+            // 获取 credential
+            guard let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                throw AuthError.invalidCredential
+            }
+
+            // 获取 ID token
+            guard let idToken = appleIDCredential.identityToken else {
+                throw AuthError.missingIDToken
+            }
+
+            let idTokenString = String(data: idToken, encoding: .utf8)!
+
+            // 登录 Supabase
+            let authData = try await supabase.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(
+                    provider: .apple,
+                    idToken: idTokenString,
+                    accessToken: appleIDCredential.authorizationCode
+                        .flatMap { String(data: $0, encoding: .utf8) }
+                )
+            )
+
+            currentUser = authData.user
+            isAuthenticated = true
+
+            print("✅ Apple 登录成功")
+
+            // 获取用户 profile
+            await fetchUserProfile()
+
+        } catch {
+            self.errorMessage = "登录失败: \(error.localizedDescription)"
+            print("❌ 登录错误: \(error)")
+        }
+    }
+
+    // MARK: - Sign Out
+
+    func signOut() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await supabase.auth.signOut()
+            currentUser = nil
+            isAuthenticated = false
+            userProfile = nil
+            print("✅ 用户已登出")
+        } catch {
+            self.errorMessage = "登出失败: \(error.localizedDescription)"
+            print("❌ 登出错误: \(error)")
+        }
+    }
+
+    // MARK: - Fetch User Profile
+
+    private func fetchUserProfile() async {
+        guard let userId = currentUser?.id else { return }
+
+        do {
+            let response: [UserProfile] = try await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+                .value
+
+            if let profile = response.first {
+                userProfile = profile
+            }
+        } catch {
+            print("⚠️ 获取用户信息失败: \(error)")
+        }
+    }
+
+    // MARK: - Update User Profile
+
+    func updateProfile(data: [String: Any]) async {
+        guard let userId = currentUser?.id else { return }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let _: UserProfile = try await supabase
+                .from("profiles")
+                .update(data)
+                .eq("id", value: userId.uuidString)
+                .select()
+                .single()
+                .execute()
+                .value
+
+            await fetchUserProfile()
+            print("✅ 用户信息已更新")
+
+        } catch {
+            self.errorMessage = "更新失败: \(error.localizedDescription)"
+            print("❌ 更新错误: \(error)")
+        }
+    }
+}
+
+// MARK: - Auth Errors
+
+enum AuthError: LocalizedError {
+    case invalidCredential
+    case missingIDToken
+    case cancelled
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidCredential:
+            return "无效的凭据"
+        case .missingIDToken:
+            return "缺少 ID Token"
+        case .cancelled:
+            return "用户取消登录"
+        }
+    }
+}
+
+// ============================================
+// FILE: Repositories/CategoriesRepository.swift
+
+import Foundation
+import Supabase
+
+@MainActor
+class CategoriesRepository: ObservableObject {
+    @Published var categories: [Category] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let supabase = SupabaseManager.shared.client
+
+    // MARK: - Fetch Categories
+
+    func fetchCategories() async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response: [Category] = try await supabase
+                .from("categories")
+                .select()
+                .eq("user_id", value: userId)
+                .order("sort_order", ascending: true)
+                .execute()
+                .value
+
+            categories = response
+            print("✅ 加载了 \(response.count) 个分类")
+
+        } catch {
+            self.errorMessage = "加载分类失败: \(error.localizedDescription)"
+            print("❌ 加载分类错误: \(error)")
+        }
+    }
+
+    // MARK: - Create Category
+
+    func createCategory(name: String, emoji: String, color: String) async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let newCategory = Category(
+                userId: userId,
+                name: name,
+                emoji: emoji,
+                color: color
+            )
+
+            let _: Category = try await supabase
+                .from("categories")
+                .insert(newCategory)
+                .select()
+                .single()
+                .execute()
+                .value
+
+            print("✅ 创建分类成功")
+            await fetchCategories()
+
+        } catch {
+            self.errorMessage = "创建分类失败: \(error.localizedDescription)"
+            print("❌ 创建分类错误: \(error)")
+        }
+    }
+
+    // MARK: - Update Category
+
+    func updateCategory(_ category: Category) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let updatedCategory = category.withUpdatedTimestamp()
+
+            let _: Category = try await supabase
+                .from("categories")
+                .update(updatedCategory)
+                .eq("id", value: category.id.uuidString)
+                .select()
+                .single()
+                .execute()
+                .value
+
+            print("✅ 更新分类成功")
+            await fetchCategories()
+
+        } catch {
+            self.errorMessage = "更新分类失败: \(error.localizedDescription)"
+            print("❌ 更新分类错误: \(error)")
+        }
+    }
+
+    // MARK: - Delete Category
+
+    func deleteCategory(_ category: Category) async {
+        // 系统分类不能删除
+        if category.isSystem {
+            errorMessage = "系统分类不能删除"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await supabase
+                .from("categories")
+                .delete()
+                .eq("id", value: category.id.uuidString)
+                .execute()
+
+            print("✅ 删除分类成功")
+            await fetchCategories()
+
+        } catch {
+            self.errorMessage = "删除分类失败: \(error.localizedDescription)"
+            print("❌ 删除分类错误: \(error)")
+        }
+    }
+}
+
+// MARK: - Helper Extension
+
+extension Category {
+    func withUpdatedTimestamp() -> Category {
+        Category(
+            id: id,
+            userId: userId,
+            name: name,
+            emoji: emoji,
+            color: color,
+            sortOrder: sortOrder,
+            isSystem: isSystem
+        )
+    }
+}
+
+// ============================================
+// FILE: Repositories/ItemsRepository.swift
+
+import Foundation
+import Supabase
+
+@MainActor
+class ItemsRepository: ObservableObject {
+    @Published var items: [Item] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let supabase = SupabaseManager.shared.client
+    private var realtimeChannel: SupabaseRealtimeChannel?
+
+    // MARK: - Setup Realtime
+
+    func setupRealtimeSubscription() {
+        guard let userId = SupabaseManager.currentUserId else { return }
+
+        let channel = supabase.channel("items_changes")
+
+        channel
+            .on("postgres_changes", filter: SupabaseRealtimeFilter(
+                event: .all,
+                schema: "public",
+                table: "items",
+                filter: "user_id=eq.\(userId)"
+            )) { [weak self] payload in
+                Task { @MainActor in
+                    await self?.handleRealtimeUpdate(payload)
+                }
+            }
+            .subscribe()
+
+        realtimeChannel = channel
+        print("✅ Realtime 订阅已设置")
+    }
+
+    // MARK: - Handle Realtime Updates
+
+    private func handleRealtimeUpdate(_ payload: RealtimePayload) async {
+        switch payload.eventType {
+        case .insert:
+            if let newItem = payload.decode(Item.self) {
+                // 避免重复添加
+                if !items.contains(where: { $0.id == newItem.id }) {
+                    items.insert(newItem, at: 0)
+                    print("📥 Realtime: 新增项目")
+                }
+            }
+
+        case .update:
+            if let updatedItem = payload.decode(Item.self) {
+                if let index = items.firstIndex(where: { $0.id == updatedItem.id }) {
+                    items[index] = updatedItem
+                    print("📥 Realtime: 更新项目")
+                }
+            }
+
+        case .delete:
+            if let deletedItem = payload.decode(Item.self) {
+                items.removeAll { $0.id == deletedItem.id }
+                print("📥 Realtime: 删除项目")
+            }
+
+        default:
+            break
+        }
+    }
+
+    // MARK: - Fetch Items
+
+    func fetchItems() async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response: [Item] = try await supabase
+                .from("items")
+                .select("*, category:categories(*)")
+                .eq("user_id", value: userId)
+                .not("deleted_at", operator: .is, value: nil)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+
+            items = response
+            print("✅ 加载了 \(response.count) 个项目")
+
+            // 设置 Realtime 订阅（仅首次）
+            if realtimeChannel == nil {
+                setupRealtimeSubscription()
+            }
+
+        } catch {
+            self.errorMessage = "加载失败: \(error.localizedDescription)"
+            print("❌ 加载项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Fetch Items by Category
+
+    func fetchItems(categoryId: UUID) async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response: [Item] = try await supabase
+                .from("items")
+                .select("*, category:categories(*)")
+                .eq("user_id", value: userId)
+                .eq("category_id", value: categoryId.uuidString)
+                .not("deleted_at", operator: .is, value: nil)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+
+            items = response
+            print("✅ 加载了 \(response.count) 个项目")
+
+        } catch {
+            self.errorMessage = "加载失败: \(error.localizedDescription)"
+            print("❌ 加载项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Fetch Items by Type
+
+    func fetchItems(type: ItemType) async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let response: [Item] = try await supabase
+                .from("items")
+                .select("*, category:categories(*)")
+                .eq("user_id", value: userId)
+                .eq("item_type", value: type.rawValue)
+                .not("deleted_at", operator: .is, value: nil)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+
+            items = response
+            print("✅ 加载了 \(response.count) 个 \(type.displayName) 项目")
+
+        } catch {
+            self.errorMessage = "加载失败: \(error.localizedDescription)"
+            print("❌ 加载项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Create Item
+
+    func createItem(_ item: Item) async {
+        guard let userId = SupabaseManager.currentUserId else {
+            errorMessage = "用户未登录"
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            // 创建带用户 ID 的项目
+            var newItem = item
+            // 通过 JSON 字符串构造来设置 userId
+            let itemData: [String: Any] = [
+                "id": item.id.uuidString,
+                "user_id": userId.uuidString,
+                "category_id": item.categoryId.uuidString,
+                "item_type": item.itemType.rawValue,
+                "title": item.title,
+                "content": item.content ?? "",
+                "source_type": item.sourceType.rawValue,
+                "scheduled_start": item.scheduledStart?.ISO8601Format(),
+                "scheduled_end": item.scheduledEnd?.ISO8601Format(),
+                "location": item.location ?? "",
+                "reminder_sent": item.reminderSent,
+                "calendar_synced": item.calendarSynced,
+                "is_completed": item.isCompleted,
+                "metadata": item.metadata ?? [:]
+            ]
+
+            // 使用 execute 方法
+            try await supabase
+                .from("items")
+                .insert(itemData)
+                .execute()
+
+            print("✅ 创建项目成功")
+            // Realtime 会自动更新，不需要手动添加
+
+        } catch {
+            self.errorMessage = "创建失败: \(error.localizedDescription)"
+            print("❌ 创建项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Update Item
+
+    func updateItem(_ item: Item) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            let updateData: [String: Any] = [
+                "title": item.title,
+                "content": item.content ?? "",
+                "updated_at": ISO8601DateFormatter().string(from: Date())
+            ]
+
+            // 根据类型添加特定字段
+            if item.itemType == .todo {
+                updateData["is_completed"] = item.isCompleted
+                updateData["completed_at"] = item.isCompleted ? ISO8601DateFormatter().string(from: Date()) : nil
+            }
+
+            try await supabase
+                .from("items")
+                .update(updateData)
+                .eq("id", value: item.id.uuidString)
+                .execute()
+
+            print("✅ 更新项目成功")
+
+        } catch {
+            self.errorMessage = "更新失败: \(error.localizedDescription)"
+            print("❌ 更新项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Soft Delete Item
+
+    func softDeleteItem(_ item: Item) async {
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await supabase
+                .from("items")
+                .update(["deleted_at": ISO8601DateFormatter().string(from: Date())])
+                .eq("id", value: item.id.uuidString)
+                .execute()
+
+            print("✅ 删除项目成功")
+            // Realtime 会自动更新
+
+        } catch {
+            self.errorMessage = "删除失败: \(error.localizedDescription)"
+            print("❌ 删除项目错误: \(error)")
+        }
+    }
+
+    // MARK: - Toggle Todo Completion
+
+    func toggleTodoCompletion(_ item: Item) async {
+        var updatedItem = item
+        updatedItem.isCompleted.toggle()
+        await updateItem(updatedItem)
+    }
+}
+
+// MARK: - Date Formatter Helper
+
+extension Date {
+    func ISO8601Format() -> String {
+        ISO8601DateFormatter().string(from: self)
+    }
+}
+
+// ============================================
+// MARK: - ===== ViewModels/ =====
+// FILE: ViewModels/AuthViewModel.swift
+
+import Foundation
+import SwiftUI
+
+@MainActor
+class AuthViewModel: ObservableObject {
+    @Published var isAuthenticated = false
+    @Published var currentUser: AuthUser?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let authRepository = AuthRepository()
+
+    init() {
+        // 订阅 repository 的状态变化
+        // 在实际使用中会通过 @EnvironmentObject 传递
+    }
+
+    // MARK: - Check Auth
+
+    func checkAuthState() async {
+        await authRepository.checkAuthState()
+        isAuthenticated = authRepository.isAuthenticated
+        currentUser = authRepository.currentUser
+    }
+
+    // MARK: - Sign In
+
+    func signInWithApple() async {
+        await authRepository.signInWithApple()
+        isAuthenticated = authRepository.isAuthenticated
+        currentUser = authRepository.currentUser
+        errorMessage = authRepository.errorMessage
+    }
+
+    // MARK: - Sign Out
+
+    func signOut() async {
+        await authRepository.signOut()
+        isAuthenticated = false
+        currentUser = nil
+    }
+}
+
+// ============================================
+// FILE: ViewModels/HomeViewModel.swift
+
+import Foundation
+import SwiftUI
+
+@MainActor
+class HomeViewModel: ObservableObject {
+    @Published var categories: [Category] = []
+    @Published var recentItems: [Item] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+
+    private let categoriesRepository = CategoriesRepository()
+    private let itemsRepository = ItemsRepository()
+
+    // MARK: - Load Data
+
+    func loadData() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        async let categories = categoriesRepository.fetchCategories()
+        async let items = itemsRepository.fetchItems()
+
+        do {
+            await categories
+            try? await items
+        }
+    }
+
+    // MARK: - Select Category
+
+    func selectCategory(_ category: Category) async {
+        await itemsRepository.fetchItems(categoryId: category.id)
+        recentItems = itemsRepository.items
+    }
+}
+
+// ============================================
+// MARK: - ===== Views/ =====
+// FILE: Views/Auth/LoginView.swift
+
+import SwiftUI
+import AuthenticationServices
+
+struct LoginView: View {
+    @EnvironmentObject var authState: AuthState
+    @StateObject private var viewModel = AuthViewModel()
+    @State private var isShowingAlert = false
+
+    var body: some View {
+        VStack(spacing: 30) {
+            Spacer()
+
+            // Logo & Title
+            VStack(spacing: 16) {
+                Text("Sortie")
+                    .font(.system(size: 48, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(hex: "9CB4B8"), Color(hex: "B8C4C8")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                Text("智能备忘录")
+                    .font(.title2)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            // Features
+            VStack(alignment: .leading, spacing: 20) {
+                FeatureRow(icon: "💡", text: "智能整理，自动归档")
+                FeatureRow(icon: "📅", text: "通知转日程，省心省力")
+                FeatureRow(icon: "🔒", text: "本地存储，隐私安全")
+            }
+
+            Spacer()
+
+            // Sign In Button
+            if #available(iOS 17.0 *) {
+                SignInWithAppleButton(
+                    onRequest: { request in
+                        request.requestedScopes = [.fullName, .email]
+                    },
+                    onCompletion: { result in
+                        Task {
+                            await handleSignInResult(result)
+                        }
+                    }
+                )
+                .signInWithAppleButtonStyle(.black)
+                .frame(height: 50)
+                .cornerRadius(25)
+                .padding(.horizontal)
+            }
+
+            // Loading indicator
+            if viewModel.isLoading {
+                ProgressView()
+                    .padding()
+            }
+
+            Spacer()
+        }
+        .padding()
+        .alert("错误", isPresented: $isShowingAlert) {
+            Button("确定", role: .cancel) {}
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
+    }
+
+    private func handleSignInResult(_ result: Result<ASAuthorization, Error>) async {
+        switch result {
+        case .success(let authorization):
+            await viewModel.signInWithApple()
+            if viewModel.isAuthenticated {
+                authState.currentUser = viewModel.currentUser
+                authState.isAuthenticated = true
+            }
+
+        case .failure(let error):
+            viewModel.errorMessage = error.localizedDescription
+            isShowingAlert = true
+        }
+    }
+}
+
+struct FeatureRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Text(icon)
+                .font(.title2)
+            Text(text)
+                .font(.body)
+                .foregroundColor(.primary)
+            Spacer()
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+    }
+}
+
+// ============================================
+// FILE: Views/Home/HomeView.swift
+
+import SwiftUI
+
+struct HomeView: View {
+    @StateObject private var viewModel = HomeViewModel()
+    @State private var selectedCategory: Category?
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 搜索栏
+                    SearchBar()
+
+                    // 分类网格
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("分类")
+                            .font(.headline)
+                            .padding(.horizontal)
+                            .padding(.top, 20)
+
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: 16) {
+                            ForEach(viewModel.categories) { category in
+                                CategoryCard(category: category)
+                                    .onTapGesture {
+                                        selectedCategory = category
+                                    }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // 最近添加
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("最近添加")
+                            .font(.headline)
+                            .padding(.horizontal)
+
+                        ForEach(viewModel.recentItems.prefix(3)) { item in
+                            ItemRow(item: item)
+                                .padding(.horizontal)
+                        }
+                    }
+                }
+            }
+            .background(Color(hex: "FAF7F2"))
+            .navigationTitle("首页")
+        }
+        .task {
+            await viewModel.loadData()
+        }
+        .sheet(item: $selectedCategory) { category in
+            CategoryDetailView(category: category)
+        }
+    }
+}
+
+struct SearchBar: View {
+    @State private var text = ""
+
+    var body: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+
+            TextField("搜索内容、分类...", text: $text)
+                .textFieldStyle(.plain)
+
+            if !text.isEmpty {
+                Button {
+                    text = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .padding(.horizontal)
+    }
+}
+
+// ============================================
+// FILE: Views/Components/CategoryCard.swift
+
+import SwiftUI
+
+struct CategoryCard: View {
+    let category: Category
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // 图标
+            ZStack {
+                Circle()
+                    .fill(Color(hex: category.color))
+                    .frame(width: 56, height: 56)
+
+                Text(category.emoji)
+                    .font(.title)
+            }
+
+            // 名称和数量
+            VStack(alignment: .leading, spacing: 4) {
+                Text(category.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                // 数量需要在实际使用时从数据获取
+                Text("项目")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
+// ============================================
+// FILE: Views/Components/ItemRow.swift
+
+import SwiftUI
+
+struct ItemRow: View {
+    let item: Item
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // 类型图标
+            Circle()
+                .fill(Color(hex: item.category?.color ?? "9CB4B8"))
+                .frame(width: 44, height: 44)
+                .overlay {
+                    Text(item.itemType.emoji)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.title)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                if let content = item.content {
+                    Text(content)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+
+                // 时间信息
+                HStack(spacing: 8) {
+                    if let start = item.scheduledStart {
+                        Label(start.formatted(date: .abbreviated, time: .shortened), systemImage: "calendar")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if let location = item.location {
+                        Label(location, systemImage: "location")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // 待办完成状态
+            if item.itemType == .todo {
+                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(item.isCompleted ? .green : .secondary)
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+// ============================================
+// FILE: Views/Category/CategoryDetailView.swift
+
+import SwiftUI
+
+struct CategoryDetailView: View {
+    let category: Category
+    @StateObject private var viewModel = ItemsRepository()
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationView {
+            Group {
+                if viewModel.isLoading {
+                    ProgressView("加载中...")
+                } else if viewModel.items.isEmpty {
+                    emptyView
+                } else {
+                    List {
+                        ForEach(viewModel.items) { item in
+                            ItemRow(item: item)
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("\(category.emoji) \(category.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("完成") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .task {
+            await viewModel.fetchItems(categoryId: category.id)
+        }
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "tray")
+                .font(.system(size: 60))
+                .foregroundColor(.secondary)
+
+            Text("暂无内容")
+                .font(.headline)
+                .foregroundColor(.secondary)
+
+            Text("点击下方 + 添加第一个项目")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// ============================================
+// MARK: - ===== Extensions/ =====
+// FILE: Core/Extensions/Color+Hex.swift
+
+import SwiftUI
+
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex, scanLocation: nil).scanHexInt64(&int)
+
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
+}
+
+// ============================================
+// FILE: Core/Extensions/View+Sheet.swift
+
+import SwiftUI
+
+extension Binding {
+    func onChange(_ handler: @escaping (Value) -> Void) -> Binding<Value> {
+        Binding(
+            get: { self.wrappedValue },
+            set: { newValue in
+                self.wrappedValue = newValue
+                handler(newValue)
+            }
+        )
+    }
+}

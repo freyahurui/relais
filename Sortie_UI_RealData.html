@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sortie - 真实数据版本</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Nunito', 'Noto Serif SC', -apple-system, sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 0;
+            height: 0;
+            display: none;
+        }
+
+        /* Animations */
+        @keyframes floatUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .float-up { animation: floatUp 0.6s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .gradient-shift { animation: gradient-shift 8s ease infinite; }
+        .spin { animation: spin 0.8s linear infinite; }
+
+        /* Stagger children */
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.2s; }
+        .stagger-5 { animation-delay: 0.25s; }
+        .stagger-6 { animation-delay: 0.3s; }
+
+        /* Glass morphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .glass-dark {
+            background: rgba(74, 69, 64, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Phone frame */
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border-radius: 44px;
+            box-shadow:
+                0 0 0 12px #1a1a1a,
+                0 0 0 14px #333,
+                0 30px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 32px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        /* Ambient background */
+        .ambient-bg {
+            background: linear-gradient(135deg, #FAF7F2 0%, #F5F1E8 50%, #FAF7F2 100%);
+            background-size: 200% 200%;
+        }
+
+        .ambient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* Card hover effects */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(156, 180, 184, 0.2);
+        }
+
+        /* Floating button - no transform on any state */
+        .float-btn {
+            box-shadow:
+                0 8px 30px rgba(156, 180, 184, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .float-btn:hover {
+            box-shadow:
+                0 12px 40px rgba(156, 180, 184, 0.5),
+                0 0 0 6px rgba(156, 180, 184, 0.08);
+        }
+        .float-btn:active {
+            box-shadow:
+                0 6px 20px rgba(156, 180, 184, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* Loading shimmer */
+        .shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(156, 180, 184, 0.1) 0%,
+                rgba(156, 180, 184, 0.3) 50%,
+                rgba(156, 180, 184, 0.1) 100%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Category icon gradient */
+        .icon-gradient-1 { background: linear-gradient(135deg, #D4C8D4 0%, #C8B8A8 100%); }
+        .icon-gradient-2 { background: linear-gradient(135deg, #B8C4C8 0%, #9CB4B8 100%); }
+        .icon-gradient-3 { background: linear-gradient(135deg, #B8C4A8 0%, #A8B49C 100%); }
+        .icon-gradient-4 { background: linear-gradient(135deg, #C8B8A8 0%, #B8A898 100%); }
+        .icon-gradient-5 { background: linear-gradient(135deg, #D4C8D4 0%, #C8B8D4 100%); }
+
+        /* Swipe to delete */
+        .swipe-container {
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 12px;
+            border-radius: 24px;
+        }
+
+        .swipe-content {
+            position: relative;
+            z-index: 2;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .swipe-delete {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(135deg, #C8A8A8, #b89090);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 24px;
+            z-index: 1;
+        }
+
+        /* Todo checkbox */
+        .todo-checkbox {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #9CB4B8;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+        .todo-checkbox:hover {
+            background: rgba(156, 180, 184, 0.1);
+        }
+        .todo-checkbox.checked {
+            background: linear-gradient(135deg, #9CB4B8, #B8C4C8);
+            border-color: #9CB4B8;
+        }
+        .todo-checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Todo completed state */
+        .todo-completed .todo-title {
+            text-decoration: line-through;
+            color: #9B958C;
+        }
+
+        /* Spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(156, 180, 184, 0.2);
+            border-top-color: #9CB4B8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .spinner-lg {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(156, 180, 184, 0.15);
+            border-top-color: #9CB4B8;
+        }
+
+        /* Drag and drop styles */
+        .dragging {
+            opacity: 0.5;
+            transform: scale(1.05);
+        }
+        .drag-over {
+            border: 2px dashed #9CB4B8;
+        }
+
+        /* Horizontal scroll for categories */
+        .horizontal-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        .horizontal-scroll::-webkit-scrollbar {
+            display: none;
+        }
+        .scroll-snap-start {
+            scroll-snap-align: start;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        morandi: {
+                            bg: '#FAF7F2',
+                            bgAlt: '#F5F1E8',
+                            card: '#F0EBE0',
+                            text: '#4A4540',
+                            textSecondary: '#9B958C',
+                            accent: '#9CB4B8',
+                            success: '#B8C4A8',
+                            warning: '#D4C4A8',
+                            error: '#C8A8A8',
+                            group1: '#C8B8A8',
+                            group2: '#B8C4C8',
+                            group3: '#D4C8D4',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 40px rgba(156, 180, 184, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex items-center justify-center p-8">
+    <div class="phone-frame ambient-bg gradient-shift" id="root">
+        <!-- Ambient orbs -->
+        <div class="ambient-orb w-64 h-64 bg-morandi-group3 -top-20 -left-20"></div>
+        <div class="ambient-orb w-48 h-48 bg-morandi-accent -bottom-20 -right-20"></div>
+        <div class="ambient-orb w-32 h-32 bg-morandi-success top-40 -right-16"></div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useCallback, useRef } = React;
+
+        // ==================== Supabase 配置 ====================
+        const SUPABASE_CONFIG = {
+            url: 'https://usmsbiunhnzroqweyokh.supabase.co',
+            key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVzbXNiaXVuaG56cm9xd2V5b2toIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzExNDMzMzcsImV4cCI6MjA4NjcxOTMzN30.fwiHgsRc-7o0h6bn7YSpNxax05wn6hfgO4LTpEL5Tc8'
+        };
+
+        // ==================== API 工具函数 ====================
+        const apiRequest = async (endpoint, options = {}, token = null) => {
+            const url = SUPABASE_CONFIG.url + endpoint;
+
+            const headers = {
+                'apikey': SUPABASE_CONFIG.key,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const requestOptions = { ...options, headers };
+
+            const response = await fetch(url, requestOptions);
+            const contentType = response.headers.get('content-type');
+
+            let data;
+            if (contentType && contentType.includes('application/json')) {
+                data = await response.json();
+            } else {
+                data = await response.text();
+            }
+
+            if (!response.ok) {
+                const errorMsg = data.message || data.error?.message || response.statusText;
+
+                // Check for JWT expiration errors
+                if (errorMsg.includes('JWT') || errorMsg.includes('expired') ||
+                    response.status === 401 || response.status === 403) {
+                    // Throw a special error for JWT expiration
+                    const jwtError = new Error('JWT_EXPIRED');
+                    jwtError.originalMessage = errorMsg;
+                    throw jwtError;
+                }
+
+                throw new Error(errorMsg);
+            }
+
+            return data;
+        };
+
+        // ==================== Loading Skeleton 组件 ====================
+        const CategorySkeleton = () => (
+            <div className="flex-shrink-0 w-40 bg-white/60 backdrop-blur rounded-3xl p-5 shadow-soft border border-white/60 mr-4">
+                <div className="w-14 h-14 rounded-2xl shimmer mb-4"></div>
+                <div className="h-5 shimmer rounded-lg mb-2 w-20"></div>
+                <div className="h-4 shimmer rounded-lg w-16"></div>
+            </div>
+        );
+
+        const ItemSkeleton = () => (
+            <div className="bg-white/60 backdrop-blur rounded-3xl p-5 shadow-soft border border-white/60">
+                <div className="h-5 shimmer rounded-lg mb-2 w-3/4"></div>
+                <div className="h-4 shimmer rounded-lg w-1/2"></div>
+            </div>
+        );
+
+        // ==================== Error 组件 ====================
+        const ErrorBanner = ({ error, onRetry, onDismiss }) => (
+            <div className="mx-5 mt-4 bg-morandi-error/20 border border-morandi-error/40 rounded-2xl p-4 flex items-start gap-3">
+                <span className="text-xl">⚠️</span>
+                <div className="flex-1">
+                    <p className="text-morandi-text font-semibold text-sm mb-1">出错了</p>
+                    <p className="text-morandi-textSecondary text-xs">{error}</p>
+                </div>
+                <div className="flex gap-2">
+                    {onRetry && (
+                        <button onClick={onRetry} className="px-3 py-1.5 bg-morandi-error/30 rounded-lg text-xs font-medium">
+                            重试
+                        </button>
+                    )}
+                    {onDismiss && (
+                        <button onClick={onDismiss} className="w-8 h-8 flex items-center justify-center">
+                            ✕
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
+
+        // ==================== 空状态组件 ====================
+        const EmptyState = ({ icon, title, description, action }) => (
+            <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+                <span className="text-6xl mb-4 opacity-50">{icon}</span>
+                <h3 className="text-morandi-text font-bold text-lg mb-2">{title}</h3>
+                <p className="text-morandi-textSecondary text-sm mb-6">{description}</p>
+                {action && action}
+            </div>
+        );
+
+        // ==================== 项目详情编辑弹窗 ====================
+        const ItemDetailModal = ({ show, item, onClose, onSave, onDelete, loading, categories }) => {
+            if (!show) return null;
+
+            const [title, setTitle] = useState(item?.title || '');
+            const [content, setContent] = useState(item?.content || '');
+            const [categoryId, setCategoryId] = useState(item?.category_id || '');
+            const [formatType, setFormatType] = useState(item?.item_type || 'note');
+            const [dueDate, setDueDate] = useState('');
+            const [startTime, setStartTime] = useState('');
+            const [endTime, setEndTime] = useState('');
+            const [location, setLocation] = useState('');
+            const [isCompleted, setIsCompleted] = useState(item?.is_completed || false);
+
+            useEffect(() => {
+                if (item) {
+                    setTitle(item.title || '');
+                    setContent(item.content || '');
+                    setCategoryId(item.category_id || '');
+                    setFormatType(item.item_type || 'note');
+
+                    // 根据类型设置字段
+                    if (item.item_type === 'todo') {
+                        setDueDate(item.scheduled_start ? item.scheduled_start.substring(0, 16) : '');
+                    }
+                    if (item.item_type === 'schedule') {
+                        setStartTime(item.scheduled_start ? item.scheduled_start.substring(0, 16) : '');
+                        setEndTime(item.scheduled_end ? item.scheduled_end.substring(0, 16) : '');
+                        setLocation(item.location || '');
+                    }
+                    setIsCompleted(item.is_completed || false);
+                }
+            }, [item]);
+
+            const handleSave = () => {
+                const updateData = {
+                    categoryId,
+                    formatType,
+                    title,
+                    content
+                };
+
+                // 根据格式类型添加特定字段
+                if (formatType === 'todo') {
+                    updateData.dueDate = dueDate;
+                    updateData.isCompleted = isCompleted;
+                }
+                if (formatType === 'schedule') {
+                    updateData.startTime = startTime;
+                    updateData.endTime = endTime;
+                    updateData.location = location;
+                }
+
+                onSave(item.id, updateData);
+            };
+
+            const handleDelete = () => {
+                if (confirm('确定要删除这条内容吗？')) {
+                    onDelete(item);
+                    onClose();
+                }
+            };
+
+            const formatTypeLabels = {
+                'schedule': '📅 日程',
+                'todo': '✅ 待办',
+                'note': '📝 笔记'
+            };
+
+            return (
+                <div className="fixed inset-0 bg-morandi-bg z-50 slide-up">
+                    <div className="h-full flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 pt-14 pb-4 border-b border-morandi-card">
+                            <button
+                                onClick={onClose}
+                                className="w-10 h-10 rounded-full bg-white/60 text-morandi-text flex items-center justify-center hover:bg-white/80 transition-colors"
+                            >
+                                ✕
+                            </button>
+                            <h2 className="text-morandi-text font-bold text-lg">
+                                编辑{formatType === 'todo' ? '待办' : formatType === 'schedule' ? '日程' : '笔记'}
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleDelete}
+                                    className="w-10 h-10 rounded-full bg-red-400/80 text-white flex items-center justify-center hover:bg-red-500 transition-all shadow-sm"
+                                >
+                                    🗑️
+                                </button>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading || !title.trim()}
+                                    className="w-10 h-10 rounded-full bg-gradient-to-br from-morandi-accent to-morandi-group2 text-white flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {loading ? <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }}></div> : '✓'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 overflow-y-auto p-5">
+                            {/* 文件分类（文件夹）选择 */}
+                            <div className="bg-white rounded-3xl shadow-soft p-4 mb-4 border border-white/60">
+                                <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">📁 文件夹</label>
+                                <select
+                                    value={categoryId}
+                                    onChange={(e) => setCategoryId(e.target.value)}
+                                    className="w-full px-4 py-3 bg-morandi-bg rounded-xl outline-none text-morandi-text"
+                                >
+                                    {categories?.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* 格式分类选择 */}
+                            <div className="bg-white rounded-3xl shadow-soft p-4 mb-4 border border-white/60">
+                                <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">📋 类型</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {Object.entries(formatTypeLabels).map(([type, label]) => (
+                                        <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() => setFormatType(type)}
+                                            className={`px-4 py-3 rounded-xl text-sm font-medium transition-all ${
+                                                formatType === type
+                                                    ? 'bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white'
+                                                    : 'bg-morandi-bg text-morandi-text'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 标题 */}
+                            <div className="bg-white rounded-3xl shadow-soft p-5 mb-4 border border-white/60">
+                                <label className="text-morandi-textSecondary text-sm font-medium mb-3 block">标题</label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="输入标题..."
+                                    className="w-full text-xl font-bold text-morandi-text placeholder:text-morandi-textSecondary bg-transparent outline-none"
+                                />
+                            </div>
+
+                            {/* 内容 */}
+                            <div className="bg-white rounded-3xl shadow-soft p-5 mb-4 border border-white/60">
+                                <label className="text-morandi-textSecondary text-sm font-medium mb-3 block">详细内容</label>
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder="输入详细内容..."
+                                    className="w-full resize-none outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-[16px] leading-relaxed"
+                                    rows="4"
+                                />
+                            </div>
+
+                            {/* 待办特有字段 */}
+                            {formatType === 'todo' && (
+                                <>
+                                    <div className="bg-white rounded-3xl shadow-soft p-4 mb-4 border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">截止时间</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={dueDate}
+                                            onChange={(e) => setDueDate(e.target.value)}
+                                            className="w-full px-4 py-3 bg-morandi-bg rounded-xl outline-none text-morandi-text"
+                                        />
+                                    </div>
+                                    <div className="bg-white rounded-3xl shadow-soft p-4 mb-4 border border-white/60 flex items-center justify-between">
+                                        <span className="text-morandi-textSecondary text-sm font-medium">完成状态</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsCompleted(!isCompleted)}
+                                            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                                                isCompleted
+                                                    ? 'bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white'
+                                                    : 'bg-morandi-bg text-morandi-text'
+                                            }`}
+                                        >
+                                            {isCompleted ? '已完成' : '未完成'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* 日程特有字段 */}
+                            {formatType === 'schedule' && (
+                                <>
+                                    <div className="bg-white rounded-3xl shadow-soft p-4 mb-3 border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">开始时间</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={startTime}
+                                            onChange={(e) => setStartTime(e.target.value)}
+                                            className="w-full px-4 py-3 bg-morandi-bg rounded-xl outline-none text-morandi-text"
+                                        />
+                                    </div>
+                                    <div className="bg-white rounded-3xl shadow-soft p-4 mb-3 border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">结束时间（可选）</label>
+                                        <input
+                                            type="datetime-local"
+                                            value={endTime}
+                                            onChange={(e) => setEndTime(e.target.value)}
+                                            className="w-full px-4 py-3 bg-morandi-bg rounded-xl outline-none text-morandi-text"
+                                        />
+                                    </div>
+                                    <div className="bg-white rounded-3xl shadow-soft p-4 mb-4 border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">地点</label>
+                                        <input
+                                            type="text"
+                                            value={location}
+                                            onChange={(e) => setLocation(e.target.value)}
+                                            placeholder="例如：会议室A"
+                                            className="w-full px-4 py-3 bg-morandi-bg rounded-xl outline-none text-morandi-text placeholder:text-morandi-textSecondary"
+                                        />
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 登录界面 ====================
+        const LoginScreen = ({ onLogin, loading, error }) => {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isSignUp, setIsSignUp] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (!email.trim() || !password) return;
+                await onLogin(email, password, isSignUp);
+            };
+
+            return (
+                <div className="h-full flex flex-col items-center justify-center px-8 pb-20">
+                    <div className="w-20 h-20 bg-gradient-to-br from-morandi-accent to-morandi-group2 rounded-3xl flex items-center justify-center mb-6 shadow-glow scale-in">
+                        <span className="text-white text-4xl font-light">S</span>
+                    </div>
+
+                    <h1 className="text-morandi-text font-bold text-2xl mb-2">Sortie</h1>
+                    <p className="text-morandi-textSecondary text-sm mb-8">智能备忘录</p>
+
+                    {error && (
+                        <ErrorBanner
+                            error={error}
+                            onDismiss={() => {}}
+                        />
+                    )}
+
+                    <form onSubmit={handleSubmit} className="w-full space-y-4">
+                        <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="邮箱地址"
+                                className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                disabled={loading}
+                            />
+                        </div>
+
+                        <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="密码"
+                                className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                disabled={loading}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={!email.trim() || !password || loading}
+                            className="w-full py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <div className="spinner"></div>
+                                    <span>{isSignUp ? '注册中...' : '登录中...'}</span>
+                                </>
+                            ) : (
+                                <span>{isSignUp ? '注册' : '登录'}</span>
+                            )}
+                        </button>
+                    </form>
+
+                    <button
+                        onClick={() => setIsSignUp(!isSignUp)}
+                        className="mt-6 text-morandi-textSecondary text-sm"
+                        disabled={loading}
+                    >
+                        {isSignUp ? '已有账户？点击登录' : '没有账户？点击注册'}
+                    </button>
+                </div>
+            );
+        };
+
+        // ==================== 导航栏 ====================
+        const BottomNav = ({ activeTab, onTabChange, onInputClick }) => {
+            const navItems = [
+                { id: 'home', icon: '🏠', label: '首页' },
+                { id: 'calendar', icon: '📆', label: '日历' },
+                { id: '', icon: '', label: '' },
+                { id: 'files', icon: '📂', label: '文件' },
+                { id: 'settings', icon: '⚙️', label: '设置' },
+            ];
+
+            return (
+                <div className="absolute bottom-0 left-0 right-0 glass border-t border-white/50 px-2 pb-8 pt-3">
+                    <div className="flex items-center justify-around relative">
+                        {navItems.map((item) => {
+                            if (item.id === '') {
+                                return <div key="spacer" className="w-20"></div>;
+                            }
+                            return (
+                                <button
+                                    key={item.id}
+                                    onClick={() => onTabChange(item.id)}
+                                    className={`nav-item relative flex flex-col items-center py-2 px-5 rounded-2xl ${
+                                        activeTab === item.id ? 'active' : 'text-morandi-textSecondary'
+                                    }`}
+                                >
+                                    <span className="text-2xl mb-1">{item.icon}</span>
+                                    <span className="text-xs font-medium">{item.label}</span>
+                                </button>
+                            );
+                        })}
+
+                        <button
+                            onClick={onInputClick}
+                            className="absolute left-1/2 -translate-x-1/2 -top-7 w-16 h-16 bg-gradient-to-br from-morandi-accent to-morandi-group2 rounded-full flex items-center justify-center float-btn"
+                        >
+                            <span className="text-white text-3xl font-light">+</span>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 分类卡片 (横向滚动版) ====================
+        const CategoryCard = ({ category, onClick, delay }) => {
+            const gradientMap = {
+                '💡': 'icon-gradient-1',
+                '📅': 'icon-gradient-2',
+                '✅': 'icon-gradient-3',
+                '📁': 'icon-gradient-4',
+            };
+
+            return (
+                <div
+                    onClick={onClick}
+                    className={`float-up card-hover flex-shrink-0 w-36 bg-white/80 backdrop-blur rounded-3xl p-4 shadow-soft cursor-pointer border border-white/60 scroll-snap-start stagger-${delay}`}
+                    style={{ opacity: 0, marginRight: '16px' }}
+                >
+                    <div className={`w-14 h-14 rounded-2xl ${gradientMap[category.emoji] || 'icon-gradient-1'} flex items-center justify-center mb-3 shadow-glow`}>
+                        <span className="text-3xl">{category.emoji}</span>
+                    </div>
+                    <h3 className="text-morandi-text font-bold text-base mb-1 truncate">{category.name}</h3>
+                    <p className="text-morandi-textSecondary text-xs font-medium">{category.count || 0} 条</p>
+                </div>
+            );
+        };
+
+        // ==================== 搜索栏 ====================
+        const SearchBar = ({ value, onChange, onFocus }) => (
+            <div className="px-5 pt-14 pb-5">
+                <div className="glass rounded-2xl shadow-soft px-4 py-3.5 flex items-center border border-white/50">
+                    <span className="text-morandi-textSecondary mr-3 text-lg">🔍</span>
+                    <input
+                        type="text"
+                        value={value}
+                        onChange={onChange}
+                        onFocus={onFocus}
+                        placeholder="搜索内容、分类..."
+                        className="flex-1 outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-[15px]"
+                    />
+                </div>
+            </div>
+        );
+
+        // ==================== 输入弹窗 ====================
+        const InputModal = ({ show, value, onChange, onSubmit, loading, onClose }) => {
+            if (!show) return null;
+
+            const handleConfirm = () => {
+                if (!value.trim()) return;
+                onSubmit(value);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-end justify-center" style={{ zIndex: 200 }}>
+                    <div className="bg-morandi-bg w-full rounded-t-[36px] p-6 slide-up shadow-2xl">
+                        <div className="w-12 h-1.5 bg-morandi-card rounded-full mx-auto mb-6"></div>
+
+                        <div className="flex items-center justify-between mb-5">
+                            <h2 className="text-morandi-text font-bold text-xl">添加内容</h2>
+                            <button
+                                onClick={onClose}
+                                className="w-10 h-10 rounded-full bg-morandi-card text-morandi-text flex items-center justify-center hover:bg-morandi-textSecondary/20 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-3xl shadow-soft p-5 mb-4 border border-white/60">
+                            <textarea
+                                value={value}
+                                onChange={onChange}
+                                placeholder="输入内容，AI将自动识别类型、时间和分类..."
+                                className="w-full resize-none outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-[16px] leading-relaxed"
+                                rows="6"
+                                autoFocus
+                            />
+                        </div>
+
+                        {/* File Upload Placeholder */}
+                        <div className="bg-white rounded-3xl shadow-soft p-4 mb-5 border border-white/60 border-dashed">
+                            <div className="flex items-center justify-center gap-3 text-morandi-textSecondary">
+                                <span className="text-2xl">📎</span>
+                                <span className="text-sm">点击上传附件（即将推出）</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            {loading && (
+                                <div className="flex items-center text-morandi-textSecondary text-sm">
+                                    <div className="spinner mr-2"></div>
+                                    AI分析中...
+                                </div>
+                            )}
+                            <button
+                                onClick={handleConfirm}
+                                disabled={!value.trim() || loading}
+                                className="ml-auto px-7 py-3.5 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                            >
+                                {loading ? 'AI分析中...' : '保存'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 可左滑删除的项目卡片 ====================
+        const SwipeableItem = ({ item, onDelete, onClick, children, onToggleComplete }) => {
+            const [swipeX, setSwipeX] = useState(0);
+            const [isDragging, setIsDragging] = useState(false);
+            const startX = useRef(0);
+            const containerRef = useRef(null);
+
+            const handleMouseDown = (e) => {
+                if (e.target.closest('button') || e.target.closest('.todo-checkbox')) return;
+                setIsDragging(true);
+                startX.current = e.clientX - swipeX;
+            };
+
+            const handleMouseMove = (e) => {
+                if (!isDragging) return;
+                const newX = e.clientX - startX.current;
+                const maxSwipe = -80;
+                setSwipeX(Math.max(maxSwipe, Math.min(0, newX)));
+            };
+
+            const handleMouseUp = () => {
+                if (!isDragging) return;
+                setIsDragging(false);
+                if (swipeX < -60) {
+                    // Delete threshold reached
+                    onDelete(item);
+                }
+                setSwipeX(0);
+            };
+
+            const handleTouchStart = (e) => {
+                if (e.target.closest('button') || e.target.closest('.todo-checkbox')) return;
+                startX.current = e.touches[0].clientX - swipeX;
+            };
+
+            const handleTouchMove = (e) => {
+                const newX = e.touches[0].clientX - startX.current;
+                const maxSwipe = -80;
+                setSwipeX(Math.max(maxSwipe, Math.min(0, newX)));
+            };
+
+            const handleTouchEnd = () => {
+                if (swipeX < -60) {
+                    onDelete(item);
+                }
+                setSwipeX(0);
+            };
+
+            const handleClick = (e) => {
+                if (Math.abs(swipeX) < 10 && !e.target.closest('.todo-checkbox')) {
+                    onClick(item);
+                }
+            };
+
+            return (
+                <div
+                    ref={containerRef}
+                    className="swipe-container"
+                    onMouseDown={handleMouseDown}
+                    onMouseMove={handleMouseMove}
+                    onMouseUp={handleMouseUp}
+                    onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                    onClick={handleClick}
+                >
+                    <div className="swipe-delete">
+                        <span className="text-white text-2xl">🗑️</span>
+                    </div>
+                    <div
+                        className="swipe-content"
+                        style={{ transform: `translateX(${swipeX}px)` }}
+                    >
+                        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-white/60">
+                            {children}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 待办项组件 ====================
+        const TodoItem = ({ item, onToggleComplete }) => {
+            const isCompleted = item.is_completed;
+
+            const getDueDateText = () => {
+                if (item.scheduled_start) {
+                    const date = new Date(item.scheduled_start);
+                    const now = new Date();
+                    const diffMs = date - now;
+                    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+                    if (diffDays < 0) return '已过期';
+                    if (diffDays === 0) return '今天截止';
+                    if (diffDays === 1) return '明天截止';
+                    if (diffDays < 7) return `${diffDays}天后截止`;
+                    return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+                }
+                return null;
+            };
+
+            const dueDate = getDueDateText();
+            const isOverdue = dueDate === '已过期';
+
+            return (
+                <div className={`flex items-center p-4 ${isCompleted ? 'todo-completed' : ''}`}>
+                    <div
+                        className={`todo-checkbox ${isCompleted ? 'checked' : ''}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleComplete(item);
+                        }}
+                    />
+                    <div className="flex-1 ml-3 min-w-0">
+                        <h3 className="text-morandi-text font-semibold text-base todo-title truncate">{item.title}</h3>
+                        {dueDate && (
+                            <p className={`text-xs mt-1 ${isOverdue ? 'text-morandi-error' : 'text-morandi-textSecondary'}`}>
+                                {dueDate}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 日程项组件 ====================
+        const ScheduleItem = ({ item }) => {
+            const formatDateTime = (dateStr) => {
+                if (!dateStr) return '';
+                const date = new Date(dateStr);
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+                let result = '';
+
+                // Check if date is today, tomorrow, or another day
+                const diffDays = Math.floor((itemDate - today) / (1000 * 60 * 60 * 24));
+
+                if (diffDays === 0) {
+                    result = '今天';
+                } else if (diffDays === 1) {
+                    result = '明天';
+                } else if (diffDays === -1) {
+                    result = '昨天';
+                } else if (diffDays < -1) {
+                    result = `${Math.abs(diffDays)}天前`;
+                } else if (diffDays < 7) {
+                    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+                    result = weekdays[date.getDay()];
+                } else {
+                    result = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+                }
+
+                // Add time
+                const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+                return `${result} ${time}`;
+            };
+
+            const startTime = item.scheduled_start ? formatDateTime(item.scheduled_start) : '';
+            const endTime = item.scheduled_end ? formatDateTime(item.scheduled_end) : '';
+
+            return (
+                <div className="p-4">
+                    <h3 className="text-morandi-text font-bold text-base mb-3">{item.title}</h3>
+                    <div className="space-y-2">
+                        {startTime && (
+                            <p className="text-sm text-morandi-textSecondary flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-morandi-accent flex-shrink-0"></span>
+                                <span>{startTime}</span>
+                            </p>
+                        )}
+                        {endTime && (
+                            <p className="text-sm text-morandi-textSecondary flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-morandi-group3 flex-shrink-0"></span>
+                                <span>至 {endTime}</span>
+                            </p>
+                        )}
+                        {item.location && (
+                            <p className="text-sm text-morandi-textSecondary flex items-center gap-2">
+                                <span className="flex-shrink-0">📍</span>
+                                <span className="truncate">{item.location}</span>
+                            </p>
+                        )}
+                        {!startTime && !item.location && item.content && (
+                            <p className="text-sm text-morandi-textSecondary line-clamp-2">{item.content}</p>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // ==================== 灵感项组件 ====================
+        const NoteItem = ({ item }) => (
+            <div className="p-4">
+                <h3 className="text-morandi-text font-bold text-base mb-2">{item.title}</h3>
+                {item.content && (
+                    <p className="text-morandi-textSecondary text-sm leading-relaxed line-clamp-2">{item.content}</p>
+                )}
+            </div>
+        );
+
+        // ==================== 分类管理页面 (支持拖拽) ====================
+        const CategoryManageScreen = ({ categories, items, onBack, onAdd, onEdit, onDelete, onReorder, token, user }) => {
+            const [showAddModal, setShowAddModal] = useState(false);
+            const [editingCategory, setEditingCategory] = useState(null);
+            const [formData, setFormData] = useState({ name: '', emoji: '📁', color: '#9CB4B8' });
+            const [draggedItem, setDraggedItem] = useState(null);
+            const [localCategories, setLocalCategories] = useState(categories);
+
+            useEffect(() => {
+                setLocalCategories(categories);
+            }, [categories]);
+
+            const emojiOptions = ['💡', '📅', '✅', '📁', '📝', '🎯', '💼', '📚', '🎨', '🔖', '⭐', '💬'];
+            const colorOptions = ['#9CB4B8', '#B8C4A8', '#D4C8D4', '#C8B8A8', '#B8C4C8', '#C8A8A8'];
+
+            const handleSubmit = async () => {
+                if (editingCategory) {
+                    await onEdit(editingCategory.id, formData);
+                } else {
+                    await onAdd(formData);
+                }
+                setShowAddModal(false);
+                setEditingCategory(null);
+                setFormData({ name: '', emoji: '📁', color: '#9CB4B8' });
+            };
+
+            const openAddModal = () => {
+                setEditingCategory(null);
+                setFormData({ name: '', emoji: '📁', color: '#9CB4B8' });
+                setShowAddModal(true);
+            };
+
+            const openEditModal = (cat) => {
+                setEditingCategory(cat);
+                setFormData({ name: cat.name, emoji: cat.emoji, color: cat.color });
+                setShowAddModal(true);
+            };
+
+            const getItemCount = (catId) => {
+                return items.filter(i => i.category_id === catId).length;
+            };
+
+            // Drag and drop handlers
+            const handleDragStart = (e, index) => {
+                setDraggedItem(index);
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            const handleDragOver = (e, index) => {
+                e.preventDefault();
+                if (draggedItem === null) return;
+
+                const newCategories = [...localCategories];
+                const draggedCategory = newCategories[draggedItem];
+
+                newCategories.splice(draggedItem, 1);
+                newCategories.splice(index, 0, draggedCategory);
+
+                setLocalCategories(newCategories);
+                setDraggedItem(index);
+            };
+
+            const handleDragEnd = async () => {
+                setDraggedItem(null);
+
+                // Update sort_order for all categories
+                const updates = localCategories.map((cat, index) => ({
+                    id: cat.id,
+                    sort_order: index + 1
+                }));
+
+                await onReorder(updates);
+            };
+
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="flex items-center px-5 pt-14 pb-5">
+                        <button
+                            onClick={onBack}
+                            className="w-10 h-10 rounded-full bg-white/60 text-morandi-text flex items-center justify-center mr-4 hover:bg-white/80 transition-colors"
+                        >
+                            ←
+                        </button>
+                        <h1 className="text-morandi-text font-bold text-xl">分类管理</h1>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto px-5 pb-32">
+                        <button
+                            onClick={openAddModal}
+                            className="w-full py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold mb-6 flex items-center justify-center gap-2"
+                        >
+                            <span className="text-xl">+</span>
+                            <span>新增分类</span>
+                        </button>
+
+                        {localCategories.map((cat, index) => (
+                            <div
+                                key={cat.id}
+                                draggable={true}
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragOver={(e) => handleDragOver(e, index)}
+                                onDragEnd={handleDragEnd}
+                                className={`bg-white/80 backdrop-blur rounded-3xl p-4 mb-3 shadow-soft border border-white/60 transition-all ${
+                                    draggedItem === index ? 'dragging' : ''
+                                } ${!cat.is_system ? 'cursor-move' : ''}`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center flex-1">
+                                        {!cat.is_system && (
+                                            <span className="text-morandi-textSecondary mr-3 text-lg">⋮⋮</span>
+                                        )}
+                                        <div
+                                            className="w-12 h-12 rounded-2xl flex items-center justify-center mr-4 shadow-glow"
+                                            style={{ background: `linear-gradient(135deg, ${cat.color}, ${cat.color}dd)` }}
+                                        >
+                                            <span className="text-2xl">{cat.emoji}</span>
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-morandi-text font-bold">{cat.name}</h3>
+                                            <p className="text-morandi-textSecondary text-sm">{getItemCount(cat.id)} 条内容</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => openEditModal(cat)}
+                                            className="w-10 h-10 rounded-xl bg-morandi-bg text-morandi-text flex items-center justify-center hover:bg-morandi-card transition-colors"
+                                        >
+                                            ✏️
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm(`确定要删除「${cat.name}」吗？`)) {
+                                                    onDelete(cat.id);
+                                                }
+                                            }}
+                                            className="w-10 h-10 rounded-xl bg-morandi-error/20 text-morandi-error flex items-center justify-center hover:bg-morandi-error/30 transition-colors"
+                                        >
+                                            🗑️
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 新增/编辑弹窗 */}
+                    {showAddModal && (
+                        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-end justify-center" style={{ zIndex: 200 }}>
+                            <div className="bg-morandi-bg w-full rounded-t-[36px] p-6 slide-up shadow-2xl">
+                                <div className="w-12 h-1.5 bg-morandi-card rounded-full mx-auto mb-6"></div>
+
+                                <h2 className="text-morandi-text font-bold text-xl mb-5">
+                                    {editingCategory ? '编辑分类' : '新增分类'}
+                                </h2>
+
+                                <div className="space-y-4">
+                                    <div className="bg-white rounded-2xl p-4 shadow-soft border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-2 block">分类名称</label>
+                                        <input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                            placeholder="输入分类名称..."
+                                            className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                        />
+                                    </div>
+
+                                    <div className="bg-white rounded-2xl p-4 shadow-soft border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-3 block">选择图标</label>
+                                        <div className="grid grid-cols-6 gap-2">
+                                            {emojiOptions.map(emoji => (
+                                                <button
+                                                    key={emoji}
+                                                    type="button"
+                                                    onClick={() => setFormData({...formData, emoji})}
+                                                    className={`w-12 h-12 rounded-xl text-xl flex items-center justify-center transition-all ${
+                                                        formData.emoji === emoji
+                                                            ? 'bg-morandi-accent text-white'
+                                                            : 'bg-morandi-bg text-morandi-text'
+                                                    }`}
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white rounded-2xl p-4 shadow-soft border border-white/60">
+                                        <label className="text-morandi-textSecondary text-sm font-medium mb-3 block">选择颜色</label>
+                                        <div className="flex gap-3">
+                                            {colorOptions.map(color => (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    onClick={() => setFormData({...formData, color})}
+                                                    className={`w-12 h-12 rounded-xl transition-all ${
+                                                        formData.color === color
+                                                            ? 'ring-4 ring-offset-2 ring-morandi-accent'
+                                                            : ''
+                                                    }`}
+                                                    style={{ backgroundColor: color }}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => {
+                                            setShowAddModal(false);
+                                            setEditingCategory(null);
+                                        }}
+                                        className="flex-1 py-4 bg-morandi-card text-morandi-text rounded-2xl font-semibold"
+                                    >
+                                        取消
+                                    </button>
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={!formData.name.trim()}
+                                        className="flex-1 py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50"
+                                    >
+                                        {editingCategory ? '保存' : '创建'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // ==================== 成功提示 ====================
+        const SuccessToast = ({ show, message }) => {
+            if (!show) return null;
+            return (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-morandi-success text-morandi-text px-6 py-4 rounded-2xl shadow-lg scale-in flex items-center gap-2" style={{ zIndex: 400 }}>
+                    <span className="text-lg">✓</span>
+                    <span className="font-medium">{message}</span>
+                </div>
+            );
+        };
+
+        // ==================== 设置页面 ====================
+        const SettingsScreen = ({ user, onLogout, onTabChange, onInputClick, onManageCategories }) => (
+            <div className="h-full flex flex-col">
+                <div className="px-5 pt-14 pb-5">
+                    <h1 className="text-morandi-text font-bold text-2xl">⚙️ 设置</h1>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-5 pb-32">
+                    <div className="bg-white/80 backdrop-blur rounded-3xl p-5 mb-4 shadow-soft border border-white/60">
+                        <div className="flex items-center mb-4">
+                            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-morandi-accent to-morandi-group2 flex items-center justify-center mr-4">
+                                <span className="text-white text-2xl font-bold">
+                                    {user?.email?.[0]?.toUpperCase() || 'U'}
+                                </span>
+                            </div>
+                            <div>
+                                <h3 className="text-morandi-text font-bold">{user?.email || '用户'}</h3>
+                                <p className="text-morandi-textSecondary text-sm">已登录</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        onClick={onManageCategories}
+                        className="w-full bg-white/80 text-morandi-text py-4 rounded-2xl font-semibold border border-white/60 mb-3 flex items-center justify-center gap-2 shadow-soft"
+                    >
+                        <span>📁</span>
+                        <span>管理分类</span>
+                    </button>
+
+                    <button
+                        onClick={onLogout}
+                        className="w-full bg-morandi-error/20 text-morandi-error py-4 rounded-2xl font-semibold border border-morandi-error/30"
+                    >
+                        退出登录
+                    </button>
+                </div>
+
+                <BottomNav activeTab="settings" onTabChange={onTabChange} onInputClick={onInputClick} />
+            </div>
+        );
+
+        // ==================== 主应用 ====================
+        const App = () => {
+            // Auth state
+            const [user, setUser] = useState(null);
+            const [token, setToken] = useState(null);
+            const [authLoading, setAuthLoading] = useState(false);
+            const [authError, setAuthError] = useState('');
+
+            // Data state
+            const [categories, setCategories] = useState([]);
+            const [items, setItems] = useState([]);
+            const [categoriesLoading, setCategoriesLoading] = useState(false);
+            const [itemsLoading, setItemsLoading] = useState(false);
+            const [dataError, setDataError] = useState('');
+
+            // UI state
+            const [screen, setScreen] = useState('home');
+            const [activeTab, setActiveTab] = useState('home');
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [searchValue, setSearchValue] = useState('');
+            const [showInput, setShowInput] = useState(false);
+            const [inputValue, setInputValue] = useState('');
+            const [saving, setSaving] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [successMessage, setSuccessMessage] = useState('');
+            const [showItemDetail, setShowItemDetail] = useState(false);
+            const [savingItem, setSavingItem] = useState(false);
+
+            // Load data from localStorage on mount
+            useEffect(() => {
+                const savedToken = localStorage.getItem('sortie_token');
+                const savedUser = localStorage.getItem('sortie_user');
+
+                if (savedToken && savedUser) {
+                    setToken(savedToken);
+                    setUser(JSON.parse(savedUser));
+                    // Try to load data, if JWT expires it will be handled
+                    loadData(savedToken).catch(() => {
+                        // JWT already handled in loadData
+                    });
+                }
+            }, []);
+
+            // Show success message
+            const showSuccessToast = (msg) => {
+                setSuccessMessage(msg);
+                setShowSuccess(true);
+                setTimeout(() => setShowSuccess(false), 2000);
+            };
+
+            // Login handler
+            const handleLogin = async (email, password, isSignUp) => {
+                setAuthLoading(true);
+                setAuthError('');
+
+                try {
+                    const endpoint = isSignUp ? '/auth/v1/signup' : '/auth/v1/token?grant_type=password';
+                    const body = isSignUp
+                        ? { email, password, data: { full_name: '用户' } }
+                        : { email, password };
+
+                    const data = await apiRequest(endpoint, {
+                        method: 'POST',
+                        body: JSON.stringify(body)
+                    });
+
+                    const newToken = data.access_token || data.token?.access_token;
+                    const newUser = data.user;
+
+                    setToken(newToken);
+                    setUser(newUser);
+
+                    localStorage.setItem('sortie_token', newToken);
+                    localStorage.setItem('sortie_user', JSON.stringify(newUser));
+
+                    await loadData(newToken);
+                } catch (err) {
+                    setAuthError(err.message || '认证失败，请重试');
+                } finally {
+                    setAuthLoading(false);
+                }
+            };
+
+            // Handle JWT expiration
+            const handleJWTExpired = () => {
+                localStorage.removeItem('sortie_token');
+                localStorage.removeItem('sortie_user');
+                setToken(null);
+                setUser(null);
+                setCategories([]);
+                setItems([]);
+                setScreen('home');
+                setActiveTab('home');
+                setAuthError('登录已过期，请重新登录');
+            };
+
+            // Create default categories for new users
+            const createDefaultCategories = async (authToken) => {
+                const defaultCategories = [
+                    { name: '灵感', emoji: '💡', color: '#D4C8D4', sort_order: 1 },
+                    { name: '工作', emoji: '💼', color: '#9CB4B8', sort_order: 2 },
+                    { name: '学习', emoji: '📚', color: '#B8C4A8', sort_order: 3 },
+                    { name: '生活', emoji: '🏠', color: '#C8B8A8', sort_order: 4 }
+                ];
+
+                try {
+                    for (const cat of defaultCategories) {
+                        await apiRequest('/rest/v1/categories', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                user_id: user.id,
+                                name: cat.name,
+                                emoji: cat.emoji,
+                                color: cat.color,
+                                is_system: true,
+                                sort_order: cat.sort_order
+                            })
+                        }, authToken);
+                    }
+                    console.log('默认分类创建成功');
+                } catch (err) {
+                    console.error('创建默认分类失败:', err);
+                }
+            };
+
+            // Load data from Supabase
+            const loadData = async (authToken) => {
+                setCategoriesLoading(true);
+                setItemsLoading(true);
+                setDataError('');
+
+                try {
+                    const [catsData, itemsData] = await Promise.all([
+                        apiRequest('/rest/v1/categories?select=*&order=sort_order.asc', { method: 'GET' }, authToken),
+                        apiRequest('/rest/v1/items?select=*,categories(*)&deleted_at=is.null&order=created_at.desc', { method: 'GET' }, authToken)
+                    ]);
+
+                    const categories = catsData || [];
+
+                    // 如果没有分类，自动创建默认分类
+                    if (categories.length === 0) {
+                        console.log('检测到无分类，正在创建默认分类...');
+                        await createDefaultCategories(authToken);
+                        // 重新加载分类
+                        const newCatsData = await apiRequest('/rest/v1/categories?select=*&order=sort_order.asc', { method: 'GET' }, authToken);
+                        setCategories(newCatsData || []);
+                    } else {
+                        setCategories(categories);
+                    }
+
+                    setItems(itemsData || []);
+                } catch (err) {
+                    // Check if JWT expired
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    setDataError(err.message || '加载数据失败');
+                } finally {
+                    setCategoriesLoading(false);
+                    setItemsLoading(false);
+                }
+            };
+
+            // Create new item
+            const handleCreateItem = async (content) => {
+                setSaving(true);
+                setDataError('');
+
+                try {
+                    // 找到"灵感"分类作为默认分类
+                    const defaultCategory = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+
+                    const newItem = {
+                        user_id: user.id,
+                        category_id: defaultCategory?.id,
+                        title: content.split('\n')[0].substring(0, 50) || '无标题',
+                        content: content,
+                        item_type: 'note',
+                        source_type: 'manual'
+                    };
+
+                    // 创建项目
+                    const createdItem = await apiRequest('/rest/v1/items', {
+                        method: 'POST',
+                        body: JSON.stringify(newItem),
+                        headers: {
+                            Prefer: 'return=representation'
+                        }
+                    }, token);
+
+                    const itemId = createdItem[0]?.id;
+                    if (!itemId) {
+                        throw new Error('创建项目失败：未返回项目ID');
+                    }
+
+                    // 关闭输入弹窗并显示成功提示
+                    setShowInput(false);
+                    setInputValue('');
+                    showSuccessToast('保存成功，AI正在分析...');
+
+                    // 调用AI解析（异步，不阻塞用户操作）
+                    triggerAIParse(itemId);
+
+                    // 重新加载数据
+                    await loadData(token);
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    setDataError(err.message || '保存失败');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            // 触发AI解析（异步调用，不阻塞UI）
+            const triggerAIParse = async (itemId) => {
+                try {
+                    const functionUrl = `${SUPABASE_CONFIG.url}/functions/v1/ai-parse`;
+
+                    const response = await fetch(functionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'apikey': SUPABASE_CONFIG.key,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            itemId: itemId,
+                            userId: user.id
+                        })
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('AI解析完成:', result);
+                        // 解析完成后重新加载数据
+                        await loadData(token);
+                        showSuccessToast('AI分析完成！');
+                    } else {
+                        const errorData = await response.json();
+                        console.error('AI解析错误:', errorData);
+                    }
+                } catch (err) {
+                    console.error('AI解析失败:', err);
+                    // AI解析失败不影响用户使用，只是保持为note类型
+                }
+            };
+
+            // Update item
+            const handleUpdateItem = async (itemId, updateData) => {
+                setSavingItem(true);
+                setDataError('');
+
+                try {
+                    const patchData = {
+                        title: updateData.title,
+                        content: updateData.content,
+                        category_id: updateData.categoryId,
+                        item_type: updateData.formatType
+                    };
+
+                    // 根据格式类型添加特定字段
+                    if (updateData.formatType === 'todo') {
+                        if (updateData.dueDate) patchData.scheduled_start = updateData.dueDate;
+                        patchData.is_completed = updateData.isCompleted;
+                        if (updateData.isCompleted) {
+                            patchData.completed_at = new Date().toISOString();
+                        } else {
+                            patchData.completed_at = null;
+                        }
+                    }
+                    if (updateData.formatType === 'schedule') {
+                        if (updateData.startTime) patchData.scheduled_start = updateData.startTime;
+                        if (updateData.endTime) patchData.scheduled_end = updateData.endTime;
+                        if (updateData.location) patchData.location = updateData.location;
+                    }
+
+                    await apiRequest(`/rest/v1/items?id=eq.${itemId}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify(patchData)
+                    }, token);
+
+                    await loadData(token);
+                    setShowItemDetail(false);
+                    showSuccessToast('更新成功！');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        setShowItemDetail(false);
+                        return;
+                    }
+                    setDataError(err.message || '更新失败');
+                } finally {
+                    setSavingItem(false);
+                }
+            };
+
+            // Toggle todo complete
+            const handleToggleComplete = async (item) => {
+                try {
+                    await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            is_completed: !item.is_completed,
+                            completed_at: !item.is_completed ? new Date().toISOString() : null
+                        })
+                    }, token);
+
+                    await loadData(token);
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('更新失败: ' + err.message);
+                }
+            };
+
+            // Delete item
+            const handleDeleteItem = async (item) => {
+                try {
+                    // Soft delete
+                    await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ deleted_at: new Date().toISOString() })
+                    }, token);
+
+                    await loadData(token);
+                    showSuccessToast('已删除');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('删除失败: ' + err.message);
+                }
+            };
+
+            // Add category
+            const handleAddCategory = async (data) => {
+                try {
+                    const maxSortOrder = categories.length > 0 ? Math.max(...categories.map(c => c.sort_order || 0)) : 0;
+                    await apiRequest('/rest/v1/categories', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            user_id: user.id,
+                            name: data.name,
+                            emoji: data.emoji,
+                            color: data.color,
+                            sort_order: maxSortOrder + 1,
+                            is_system: false
+                        })
+                    }, token);
+                    await loadData(token);
+                    showSuccessToast('分类已创建');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('创建失败: ' + err.message);
+                }
+            };
+
+            // Edit category
+            const handleEditCategory = async (id, data) => {
+                try {
+                    await apiRequest(`/rest/v1/categories?id=eq.${id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({
+                            name: data.name,
+                            emoji: data.emoji,
+                            color: data.color
+                        })
+                    }, token);
+                    await loadData(token);
+                    showSuccessToast('分类已更新');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('更新失败: ' + err.message);
+                }
+            };
+
+            // Delete category
+            const handleDeleteCategory = async (id) => {
+                try {
+                    await apiRequest(`/rest/v1/categories?id=eq.${id}`, {
+                        method: 'DELETE'
+                    }, token);
+                    await loadData(token);
+                    showSuccessToast('分类已删除');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('删除失败: ' + err.message);
+                }
+            };
+
+            // Reorder categories
+            const handleReorderCategories = async (updates) => {
+                try {
+                    // Batch update all sort_orders
+                    await Promise.all(updates.map(update =>
+                        apiRequest(`/rest/v1/categories?id=eq.${update.id}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ sort_order: update.sort_order })
+                        }, token)
+                    ));
+                    await loadData(token);
+                    showSuccessToast('顺序已更新');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('更新顺序失败: ' + err.message);
+                    await loadData(token); // Reload to restore original order
+                }
+            };
+
+            // Logout handler
+            const handleLogout = () => {
+                localStorage.removeItem('sortie_token');
+                localStorage.removeItem('sortie_user');
+                setToken(null);
+                setUser(null);
+                setCategories([]);
+                setItems([]);
+                setScreen('home');
+                setActiveTab('home');
+            };
+
+            // Tab change handler
+            const handleTabChange = (tab) => {
+                setActiveTab(tab);
+                if (tab === 'settings') setScreen('settings');
+                else if (tab === 'calendar') setScreen('calendar');
+                else if (tab === 'files') setScreen('files');
+                else setScreen('home');
+            };
+
+            // Filter items by category
+            const getFilteredItems = (categoryId) => {
+                return items.filter(item => item.category_id === categoryId);
+            };
+
+            // Handle item click
+            const handleItemClick = (item) => {
+                setSelectedItem(item);
+                setShowItemDetail(true);
+            };
+
+            // Render loading screen
+            if (authLoading) {
+                return (
+                    <div className="h-full flex flex-col items-center justify-center">
+                        <div className="spinner-lg mb-4"></div>
+                        <p className="text-morandi-textSecondary">加载中...</p>
+                    </div>
+                );
+            }
+
+            // Render login screen if not authenticated
+            if (!user || !token) {
+                return (
+                    <div className="h-full">
+                        <div className="notch"></div>
+                        <LoginScreen onLogin={handleLogin} loading={authLoading} error={authError} />
+                    </div>
+                );
+            }
+
+            // Render home screen
+            const renderHome = () => (
+                <div className="h-full flex flex-col">
+                    <SearchBar
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                    />
+
+                    {dataError && <ErrorBanner error={dataError} onRetry={() => loadData(token)} />}
+
+                    <div className="flex-1 overflow-y-auto pb-32 pt-2">
+                        <h3 className="text-morandi-text font-bold text-lg mb-4 px-5">分类</h3>
+
+                        {categoriesLoading ? (
+                            <div className="flex overflow-x-auto px-5 pb-4 horizontal-scroll">
+                                <CategorySkeleton />
+                                <CategorySkeleton />
+                                <CategorySkeleton />
+                            </div>
+                        ) : categories.length === 0 ? (
+                            <div className="px-5">
+                                <EmptyState
+                                    icon="📁"
+                                    title="暂无分类"
+                                    description="系统会自动创建默认分类"
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex overflow-x-auto px-5 pb-4 horizontal-scroll" style={{ paddingRight: '20px' }}>
+                                {categories.map((cat, idx) => (
+                                    <CategoryCard
+                                        key={cat.id}
+                                        category={{ ...cat, count: items.filter(i => i.category_id === cat.id).length }}
+                                        onClick={() => {
+                                            setSelectedCategory(cat);
+                                            setScreen('detail');
+                                        }}
+                                        delay={Math.min(idx + 1, 6)}
+                                    />
+                                ))}
+                                <div style={{ width: '8px', flexShrink: 0 }}></div>
+                            </div>
+                        )}
+
+                        <h3 className="text-morandi-text font-bold text-lg mb-4 px-5 mt-4">最近添加</h3>
+
+                        {itemsLoading ? (
+                            <div className="px-5">
+                                <ItemSkeleton />
+                                <ItemSkeleton />
+                            </div>
+                        ) : items.length === 0 ? (
+                            <div className="px-5">
+                                <EmptyState
+                                    icon="✨"
+                                    title="开始添加内容"
+                                    description="点击下方 + 按钮添加第一条内容"
+                                />
+                            </div>
+                        ) : (
+                            <div className="px-5">
+                                {items.slice(0, 5).map((item, idx) => (
+                                    <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                        <SwipeableItem
+                                            item={item}
+                                            onDelete={handleDeleteItem}
+                                            onClick={handleItemClick}
+                                            onToggleComplete={handleToggleComplete}
+                                        >
+                                            {item.item_type === 'todo' ? (
+                                                <TodoItem item={item} onToggleComplete={handleToggleComplete} />
+                                            ) : item.item_type === 'schedule' ? (
+                                                <ScheduleItem item={item} />
+                                            ) : (
+                                                <NoteItem item={item} />
+                                            )}
+                                        </SwipeableItem>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <BottomNav
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        onInputClick={() => setShowInput(true)}
+                    />
+                </div>
+            );
+
+            // Render detail screen
+            const renderDetail = () => {
+                const cat = selectedCategory;
+                const catItems = getFilteredItems(cat?.id);
+
+                return (
+                    <div className="h-full flex flex-col">
+                        <div className="flex items-center px-5 pt-14 pb-5">
+                            <button
+                                onClick={() => setScreen('home')}
+                                className="w-10 h-10 rounded-full bg-white/60 text-morandi-text flex items-center justify-center mr-4 hover:bg-white/80 transition-colors"
+                            >
+                                ←
+                            </button>
+                            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-morandi-accent to-morandi-group2 flex items-center justify-center mr-4 shadow-glow">
+                                <span className="text-2xl">{cat?.emoji}</span>
+                            </div>
+                            <h1 className="text-morandi-text font-bold text-xl">{cat?.name}</h1>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 pb-32">
+                            {itemsLoading ? (
+                                <>
+                                    <ItemSkeleton />
+                                    <ItemSkeleton />
+                                </>
+                            ) : catItems.length === 0 ? (
+                                <EmptyState
+                                    icon="📭"
+                                    title="暂无内容"
+                                    description="这个分类还没有任何内容"
+                                />
+                            ) : (
+                                catItems.map((item, idx) => (
+                                    <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                        <SwipeableItem
+                                            item={item}
+                                            onDelete={handleDeleteItem}
+                                            onClick={handleItemClick}
+                                            onToggleComplete={handleToggleComplete}
+                                        >
+                                            {item.item_type === 'todo' ? (
+                                                <TodoItem item={item} onToggleComplete={handleToggleComplete} />
+                                            ) : item.item_type === 'schedule' ? (
+                                                <ScheduleItem item={item} />
+                                            ) : (
+                                                <NoteItem item={item} />
+                                            )}
+                                        </SwipeableItem>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        <BottomNav
+                            activeTab={activeTab}
+                            onTabChange={handleTabChange}
+                            onInputClick={() => setShowInput(true)}
+                        />
+                    </div>
+                );
+            };
+
+            // Render screens
+            return (
+                <div className="h-full flex flex-col relative overflow-hidden">
+                    <div className="notch"></div>
+
+                    {screen === 'home' && renderHome()}
+                    {screen === 'detail' && renderDetail()}
+                    {screen === 'settings' && (
+                        <SettingsScreen
+                            user={user}
+                            onLogout={handleLogout}
+                            onTabChange={handleTabChange}
+                            onInputClick={() => setShowInput(true)}
+                            onManageCategories={() => setScreen('categoryManage')}
+                        />
+                    )}
+                    {screen === 'categoryManage' && (
+                        <CategoryManageScreen
+                            categories={categories}
+                            items={items}
+                            token={token}
+                            user={user}
+                            onBack={() => setScreen('settings')}
+                            onAdd={handleAddCategory}
+                            onEdit={handleEditCategory}
+                            onDelete={handleDeleteCategory}
+                            onReorder={handleReorderCategories}
+                        />
+                    )}
+                    {screen === 'calendar' && (
+                        <div className="h-full flex items-center justify-center">
+                            <EmptyState icon="📆" title="日历视图" description="即将推出" />
+                            <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onInputClick={() => setShowInput(true)} />
+                        </div>
+                    )}
+                    {screen === 'files' && (
+                        <div className="h-full flex items-center justify-center">
+                            <EmptyState icon="📂" title="文件管理" description="即将推出" />
+                            <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onInputClick={() => setShowInput(true)} />
+                        </div>
+                    )}
+
+                    <InputModal
+                        show={showInput}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onSubmit={handleCreateItem}
+                        loading={saving}
+                        onClose={() => {
+                            setShowInput(false);
+                            setInputValue('');
+                        }}
+                    />
+
+                    <ItemDetailModal
+                        show={showItemDetail}
+                        item={selectedItem}
+                        onClose={() => setShowItemDetail(false)}
+                        onSave={handleUpdateItem}
+                        onDelete={handleDeleteItem}
+                        loading={savingItem}
+                        categories={categories}
+                    />
+
+                    <SuccessToast show={showSuccess} message={successMessage} />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

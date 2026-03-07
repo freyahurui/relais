@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sortie - UI Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Nunito', 'Noto Serif SC', -apple-system, sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 0;
+            display: none;
+        }
+
+        /* Animations */
+        @keyframes floatUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.05); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .float-up { animation: floatUp 0.6s ease-out forwards; }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .scale-in { animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+        .gradient-shift { animation: gradient-shift 8s ease infinite; }
+
+        /* Stagger children */
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+        .stagger-4 { animation-delay: 0.2s; }
+        .stagger-5 { animation-delay: 0.25s; }
+        .stagger-6 { animation-delay: 0.3s; }
+
+        /* Glass morphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .glass-dark {
+            background: rgba(74, 69, 64, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Phone frame */
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border-radius: 44px;
+            box-shadow:
+                0 0 0 12px #1a1a1a,
+                0 0 0 14px #333,
+                0 30px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .notch {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 32px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        /* Ambient background */
+        .ambient-bg {
+            background: linear-gradient(135deg, #FAF7F2 0%, #F5F1E8 50%, #FAF7F2 100%);
+            background-size: 200% 200%;
+        }
+
+        .ambient-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            pointer-events: none;
+        }
+
+        /* Card hover effects */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(156, 180, 184, 0.2);
+        }
+        .card-hover:active {
+            transform: scale(0.97);
+        }
+
+        /* Floating button */
+        .float-btn {
+            box-shadow:
+                0 8px 30px rgba(156, 180, 184, 0.4),
+                0 0 0 0 rgba(156, 180, 184, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .float-btn:hover {
+            transform: scale(1.08);
+            box-shadow:
+                0 12px 40px rgba(156, 180, 184, 0.5),
+                0 0 0 8px rgba(156, 180, 184, 0.1);
+        }
+        .float-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Loading shimmer */
+        .shimmer {
+            background: linear-gradient(
+                90deg,
+                rgba(156, 180, 184, 0.1) 0%,
+                rgba(156, 180, 184, 0.3) 50%,
+                rgba(156, 180, 184, 0.1) 100%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Category icon gradient */
+        .icon-gradient-1 { background: linear-gradient(135deg, #D4C8D4 0%, #C8B8A8 100%); }
+        .icon-gradient-2 { background: linear-gradient(135deg, #B8C4C8 0%, #9CB4B8 100%); }
+        .icon-gradient-3 { background: linear-gradient(135deg, #B8C4A8 0%, #A8B49C 100%); }
+        .icon-gradient-4 { background: linear-gradient(135deg, #C8B8A8 0%, #B8A898 100%); }
+        .icon-gradient-5 { background: linear-gradient(135deg, #D4C8D4 0%, #C8B8D4 100%); }
+
+        /* Nav item */
+        .nav-item {
+            transition: all 0.2s ease;
+        }
+        .nav-item.active {
+            color: #9CB4B8;
+        }
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 4px;
+            height: 4px;
+            background: #9CB4B8;
+            border-radius: 50%;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        morandi: {
+                            bg: '#FAF7F2',
+                            bgAlt: '#F5F1E8',
+                            card: '#F0EBE0',
+                            text: '#4A4540',
+                            textSecondary: '#9B958C',
+                            accent: '#9CB4B8',
+                            success: '#B8C4A8',
+                            warning: '#D4C4A8',
+                            error: '#C8A8A8',
+                            group1: '#C8B8A8',
+                            group2: '#B8C4C8',
+                            group3: '#D4C8D4',
+                        }
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px rgba(0, 0, 0, 0.05)',
+                        'glow': '0 0 40px rgba(156, 180, 184, 0.15)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen flex items-center justify-center p-8">
+    <div class="text-center mr-12">
+        <h1 class="text-5xl font-bold text-gray-800 mb-2" style="font-family: 'Nunito', sans-serif;">Sortie</h1>
+        <p class="text-gray-500 mb-8">智能备忘录 · UI 预览</p>
+        <div class="space-y-3 text-left text-sm text-gray-600 max-w-xs">
+            <p class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-morandi-accent"></span> 温柔极简设计风格</p>
+            <p class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-morandi-group3"></span> 莫兰迪色系配色</p>
+            <p class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-morandi-success"></span> 玻璃拟态与悬浮感</p>
+            <p class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-morandi-group2"></span> 精致的交互动效</p>
+        </div>
+    </div>
+
+    <div class="phone-frame ambient-bg gradient-shift" id="root">
+        <!-- Ambient orbs -->
+        <div class="ambient-orb w-64 h-64 bg-morandi-group3 -top-20 -left-20"></div>
+        <div class="ambient-orb w-48 h-48 bg-morandi-accent -bottom-20 -right-20"></div>
+        <div class="ambient-orb w-32 h-32 bg-morandi-success top-40 -right-16"></div>
+    </div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Dummy Data
+        const categories = [
+            { id: 1, name: '灵感', emoji: '💡', count: 12, gradient: 'icon-gradient-1' },
+            { id: 2, name: '日程', emoji: '📅', count: 3, gradient: 'icon-gradient-2' },
+            { id: 3, name: '待办', emoji: '✅', count: 8, gradient: 'icon-gradient-3' },
+            { id: 4, name: '文件', emoji: '📁', count: 5, gradient: 'icon-gradient-4' },
+        ];
+
+        const items = {
+            inspiration: [
+                { id: 1, title: 'App 设计灵感', content: '使用莫兰迪色系，增加留白，让界面有呼吸感...', time: '10:30', date: '今天' },
+                { id: 2, title: '文章选题', content: '如何用 AI 提升工作效率，减少重复劳动...', time: '09:15', date: '今天' },
+            ],
+            schedule: [
+                { id: 1, title: '产品评审会', time: '14:00', location: '会议室 A', date: '今天' },
+                { id: 2, title: '设计交付', time: '18:00', location: '', date: '明天' },
+            ],
+            todo: [
+                { id: 1, title: '完成 UI 原型设计', done: false },
+                { id: 2, title: '整理用户反馈', done: true },
+            ],
+            files: [
+                { id: 1, name: '设计稿 v2.png', type: 'image', size: '2.3 MB' },
+                { id: 2, name: 'PRD 文档.pdf', type: 'pdf', size: '1.1 MB' },
+            ]
+        };
+
+        const navItems = [
+            { id: 'home', icon: '🏠', label: '首页' },
+            { id: 'calendar', icon: '📆', label: '日历' },
+            { id: '', icon: '', label: '' },
+            { id: 'files', icon: '📂', label: '文件' },
+            { id: 'settings', icon: '⚙️', label: '设置' },
+        ];
+
+        // Components
+        const SearchBar = ({ value, onChange, onFocus }) => (
+            <div className="px-5 pt-14 pb-5">
+                <div className="glass rounded-2xl shadow-soft px-4 py-3.5 flex items-center border border-white/50">
+                    <span className="text-morandi-textSecondary mr-3 text-lg">🔍</span>
+                    <input
+                        type="text"
+                        value={value}
+                        onChange={onChange}
+                        onFocus={onFocus}
+                        placeholder="搜索内容、分类..."
+                        className="flex-1 outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-[15px]"
+                    />
+                </div>
+            </div>
+        );
+
+        const CategoryCard = ({ category, onClick, delay }) => (
+            <div
+                onClick={onClick}
+                className={`float-up card-hover bg-white/80 backdrop-blur rounded-3xl p-5 shadow-soft cursor-pointer border border-white/60 stagger-${delay}`}
+                style={{ opacity: 0 }}
+            >
+                <div className={`w-14 h-14 rounded-2xl ${category.gradient} flex items-center justify-center mb-4 shadow-glow`}>
+                    <span className="text-3xl">{category.emoji}</span>
+                </div>
+                <h3 className="text-morandi-text font-bold text-lg mb-1">{category.name}</h3>
+                <p className="text-morandi-textSecondary text-sm font-medium">{category.count} 条内容</p>
+            </div>
+        );
+
+        const BottomNav = ({ activeTab, onTabChange, onInputClick }) => (
+            <div className="absolute bottom-0 left-0 right-0 glass border-t border-white/50 px-2 pb-8 pt-3">
+                <div className="flex items-center justify-around relative">
+                    {navItems.map((item) => {
+                        if (item.id === '') {
+                            return <div key="spacer" className="w-20"></div>;
+                        }
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => onTabChange(item.id)}
+                                className={`nav-item relative flex flex-col items-center py-2 px-5 rounded-2xl ${
+                                    activeTab === item.id ? 'active' : 'text-morandi-textSecondary'
+                                }`}
+                            >
+                                <span className="text-2xl mb-1">{item.icon}</span>
+                                <span className="text-xs font-medium">{item.label}</span>
+                            </button>
+                        );
+                    })}
+
+                    {/* Floating Action Button */}
+                    <button
+                        onClick={onInputClick}
+                        className="absolute left-1/2 -translate-x-1/2 -top-7 w-16 h-16 bg-gradient-to-br from-morandi-accent to-morandi-group2 rounded-full flex items-center justify-center float-btn"
+                    >
+                        <span className="text-white text-3xl font-light">+</span>
+                    </button>
+                </div>
+            </div>
+        );
+
+        const InputModal = ({ show, value, onChange, onSubmit, loading, onClose }) => {
+            if (!show) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-end justify-center" style={{ zIndex: 200 }}>
+                    <div className="bg-morandi-bg w-full rounded-t-[36px] p-6 slide-up shadow-2xl">
+                        <div className="w-12 h-1.5 bg-morandi-card rounded-full mx-auto mb-6"></div>
+
+                        <div className="flex items-center justify-between mb-5">
+                            <h2 className="text-morandi-text font-bold text-xl">添加内容</h2>
+                            <button
+                                onClick={onClose}
+                                className="w-10 h-10 rounded-full bg-morandi-card text-morandi-text flex items-center justify-center hover:bg-morandi-textSecondary/20 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-3xl shadow-soft p-5 mb-5 border border-white/60">
+                            <textarea
+                                value={value}
+                                onChange={onChange}
+                                placeholder="粘贴通知或输入内容..."
+                                className="w-full resize-none outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-[16px] leading-relaxed"
+                                rows="5"
+                                autoFocus
+                            />
+                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-morandi-card">
+                                {loading ? (
+                                    <div className="flex items-center text-morandi-textSecondary text-sm">
+                                        <div className="w-2 h-2 rounded-full bg-morandi-accent pulse-soft mr-2"></div>
+                                        AI 正在分析...
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <button className="w-11 h-11 rounded-2xl bg-morandi-bg text-morandi-text flex items-center justify-center hover:bg-morandi-card transition-colors">
+                                            📷
+                                        </button>
+                                        <button className="w-11 h-11 rounded-2xl bg-morandi-bg text-morandi-text flex items-center justify-center hover:bg-morandi-card transition-colors">
+                                            📎
+                                        </button>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={onSubmit}
+                                    disabled={!value.trim() || loading}
+                                    className="px-7 py-3.5 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+                                >
+                                    {loading ? '分析中' : '发送'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="glass-dark rounded-2xl p-4 flex items-start gap-3">
+                            <span className="text-xl">✨</span>
+                            <p className="text-morandi-textSecondary text-sm leading-relaxed">
+                                粘贴通知消息，AI 会自动识别时间、地点等信息
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const AIPreviewModal = ({ show, result, onConfirm, onCancel }) => {
+            if (!show) return null;
+
+            return (
+                <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-end justify-center" style={{ zIndex: 300 }}>
+                    <div className="bg-morandi-bg w-full rounded-t-[36px] p-6 slide-up shadow-2xl">
+                        <div className="w-12 h-1.5 bg-morandi-card rounded-full mx-auto mb-6"></div>
+
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-morandi-text font-bold text-xl">AI 识别结果</h2>
+                            <button
+                                onClick={onCancel}
+                                className="w-10 h-10 rounded-full bg-morandi-card text-morandi-text flex items-center justify-center hover:bg-morandi-textSecondary/20 transition-colors"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-6 mb-6 scale-in shadow-soft border border-white/60">
+                            <div className="flex items-center mb-5">
+                                <div className={`w-14 h-14 rounded-2xl ${
+                                    result.type.emoji === '📅' ? 'icon-gradient-2' : 'icon-gradient-1'
+                                } flex items-center justify-center mr-4 shadow-glow`}>
+                                    <span className="text-3xl">{result.type.emoji}</span>
+                                </div>
+                                <span className="text-morandi-text font-bold text-xl">{result.type.name}</span>
+                            </div>
+
+                            {result.extracted.map((item, idx) => (
+                                <div key={idx} className="flex items-center py-3 border-t border-morandi-card">
+                                    <span className="text-morandi-textSecondary w-16 text-sm">{item.label}</span>
+                                    <span className="text-morandi-text font-semibold">{item.value}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="text-morandi-textSecondary text-sm font-medium mb-3 block">归档到</label>
+                            <div className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-soft border border-white/60">
+                                <div className="flex items-center">
+                                    <span className="text-2xl mr-3">{result.category.emoji}</span>
+                                    <span className="text-morandi-text font-semibold">{result.category.name}</span>
+                                </div>
+                                <span className="text-morandi-textSecondary">▼</span>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={onCancel}
+                                className="flex-1 py-4 bg-morandi-card text-morandi-text rounded-2xl font-semibold hover:bg-morandi-textSecondary/10 transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={onConfirm}
+                                className="flex-1 py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold hover:shadow-lg transition-all"
+                            >
+                                确认归档
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const SuccessToast = ({ show, message }) => {
+            if (!show) return null;
+            return (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-morandi-success text-morandi-text px-6 py-4 rounded-2xl shadow-lg scale-in flex items-center gap-2" style={{ zIndex: 400 }}>
+                    <span className="text-lg">✓</span>
+                    <span className="font-medium">{message}</span>
+                </div>
+            );
+        };
+
+        const ScheduleItem = ({ item }) => (
+            <div className="bg-white/80 backdrop-blur rounded-3xl p-5 mb-3 shadow-soft border border-white/60">
+                <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                        <h3 className="text-morandi-text font-bold text-base mb-2">{item.title}</h3>
+                        <div className="flex items-center gap-4 text-sm text-morandi-textSecondary">
+                            <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full bg-morandi-accent"></span>
+                                {item.time}
+                            </span>
+                            {item.location && (
+                                <span className="flex items-center gap-1.5">
+                                    <span>📍</span>
+                                    {item.location}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const InspirationItem = ({ item }) => (
+            <div className="bg-white/80 backdrop-blur rounded-3xl p-5 mb-3 shadow-soft border border-white/60">
+                <h3 className="text-morandi-text font-bold text-base mb-2">{item.title}</h3>
+                <p className="text-morandi-textSecondary text-sm mb-3 leading-relaxed">{item.content}</p>
+                <div className="flex items-center text-xs text-morandi-textSecondary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-morandi-group3 mr-2"></span>
+                    {item.date} · {item.time}
+                </div>
+            </div>
+        );
+
+        const CalendarView = () => {
+            const hours = Array.from({ length: 10 }, (_, i) => i + 8);
+            const now = new Date().getHours();
+
+            return (
+                <div className="flex-1 overflow-y-auto px-5 pb-32">
+                    <div className="flex gap-2 mb-6 overflow-x-auto">
+                        {['周一', '周二', '周三', '周四', '周五', '周六', '周日'].map((day, idx) => (
+                            <button
+                                key={day}
+                                className={`flex-shrink-0 w-12 py-3 rounded-2xl text-center ${
+                                    idx === 2 ? 'bg-gradient-to-br from-morandi-accent to-morandi-group2 text-white shadow-glow' : 'bg-white/60 text-morandi-text'
+                                }`}
+                            >
+                                <div className="text-xs font-medium mb-1">{day.substring(1)}</div>
+                                <div className={`text-lg font-bold ${idx === 2 ? '' : 'text-morandi-text'}`}>{12 + idx}</div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="space-y-1">
+                        {hours.map(hour => (
+                            <div key={hour} className="flex mb-6">
+                                <span className={`w-14 text-sm text-morandi-textSecondary font-medium pt-2 ${
+                                    hour === now ? 'text-morandi-accent' : ''
+                                }`}>
+                                    {hour}:00
+                                </span>
+                                <div className="flex-1 relative">
+                                    {hour === 14 && (
+                                        <div className="bg-gradient-to-r from-morandi-accent/20 to-morandi-group2/20 border-l-4 border-morandi-accent rounded-2xl p-4 absolute w-full">
+                                            <p className="text-morandi-text font-bold text-sm mb-1">产品评审会</p>
+                                            <p className="text-morandi-textSecondary text-xs">📍 会议室 A</p>
+                                        </div>
+                                    )}
+                                    {hour === 10 && (
+                                        <div className="bg-morandi-group2/20 border-l-4 border-morandi-group2 rounded-2xl p-4 absolute w-full">
+                                            <p className="text-morandi-text font-bold text-sm mb-1">设计同步会议</p>
+                                            <p className="text-morandi-textSecondary text-xs">📍 线上</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App
+        const App = () => {
+            const [screen, setScreen] = useState('home');
+            const [activeTab, setActiveTab] = useState('home');
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [searchValue, setSearchValue] = useState('');
+            const [showInput, setShowInput] = useState(false);
+            const [inputValue, setInputValue] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [showPreview, setShowPreview] = useState(false);
+            const [showSuccess, setShowSuccess] = useState(false);
+            const [aiResult, setAiResult] = useState(null);
+
+            const handleSubmit = () => {
+                if (!inputValue.trim()) return;
+                setLoading(true);
+
+                setTimeout(() => {
+                    const isSchedule = inputValue.includes('明天') || inputValue.includes('下午') || inputValue.includes('会议');
+                    setAiResult({
+                        type: isSchedule ? { name: '日程事项', emoji: '📅' } : { name: '灵感笔记', emoji: '💡' },
+                        extracted: isSchedule ? [
+                            { label: '时间', value: '明天下午 3:00' },
+                            { label: '地点', value: '会议室 A' },
+                        ] : [
+                            { label: '主题', value: inputValue.substring(0, 20) + '...' },
+                        ],
+                        category: isSchedule ? categories[1] : categories[0],
+                    });
+                    setLoading(false);
+                    setShowInput(false);
+                    setShowPreview(true);
+                }, 1500);
+            };
+
+            const handleConfirm = () => {
+                setShowPreview(false);
+                setShowSuccess(true);
+                setInputValue('');
+                setTimeout(() => setShowSuccess(false), 2000);
+            };
+
+            const handleTabChange = (tab) => {
+                setActiveTab(tab);
+                if (tab === 'calendar') setScreen('calendar');
+                else if (tab === 'home') setScreen('home');
+                else if (tab === 'files') setScreen('files');
+            };
+
+            const handleCategoryClick = (category) => {
+                setSelectedCategory(category);
+                setScreen('detail');
+            };
+
+            const renderHome = () => (
+                <div className="h-full flex flex-col">
+                    <SearchBar
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        onFocus={() => setScreen('search')}
+                    />
+
+                    <div className="flex-1 overflow-y-auto px-5 pb-32 pt-2">
+                        <h3 className="text-morandi-text font-bold text-lg mb-4 px-1">分类</h3>
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            {categories.map((cat, idx) => (
+                                <CategoryCard
+                                    key={cat.id}
+                                    category={cat}
+                                    onClick={() => handleCategoryClick(cat)}
+                                    delay={idx + 1}
+                                />
+                            ))}
+                        </div>
+
+                        <h3 className="text-morandi-text font-bold text-lg mb-4 px-1">最近添加</h3>
+                        <div className="float-up" style={{ animationDelay: '0.3s', opacity: 0 }}>
+                            <InspirationItem item={items.inspiration[0]} />
+                        </div>
+                        <div className="float-up" style={{ animationDelay: '0.35s', opacity: 0 }}>
+                            <ScheduleItem item={items.schedule[0]} />
+                        </div>
+                    </div>
+
+                    <BottomNav
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        onInputClick={() => setShowInput(true)}
+                    />
+                </div>
+            );
+
+            const renderDetail = () => {
+                const cat = selectedCategory;
+                let contentItems = [];
+
+                if (cat.name === '灵感') contentItems = items.inspiration;
+                else if (cat.name === '待办') contentItems = items.todo;
+                else if (cat.name === '文件') contentItems = items.files;
+                else if (cat.name === '日程') contentItems = items.schedule;
+
+                return (
+                    <div className="h-full flex flex-col">
+                        <div className="flex items-center px-5 pt-14 pb-5">
+                            <button
+                                onClick={() => setScreen('home')}
+                                className="w-10 h-10 rounded-full bg-white/60 text-morandi-text flex items-center justify-center mr-4 hover:bg-white/80 transition-colors"
+                            >
+                                ←
+                            </button>
+                            <div className={`w-12 h-12 rounded-2xl ${cat.gradient} flex items-center justify-center mr-4 shadow-glow`}>
+                                <span className="text-2xl">{cat.emoji}</span>
+                            </div>
+                            <h1 className="text-morandi-text font-bold text-xl">{cat.name}</h1>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 pb-32">
+                            {cat.name === '灵感' && contentItems.map((item, idx) => (
+                                <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                    <InspirationItem item={item} />
+                                </div>
+                            ))}
+                            {cat.name === '日程' && contentItems.map((item, idx) => (
+                                <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                    <ScheduleItem item={item} />
+                                </div>
+                            ))}
+                        </div>
+
+                        <BottomNav
+                            activeTab={activeTab}
+                            onTabChange={handleTabChange}
+                            onInputClick={() => setShowInput(true)}
+                        />
+                    </div>
+                );
+            };
+
+            const renderCalendar = () => (
+                <div className="h-full flex flex-col">
+                    <div className="px-5 pt-14 pb-5">
+                        <h1 className="text-morandi-text font-bold text-2xl">📆 日历</h1>
+                    </div>
+                    <CalendarView />
+                    <BottomNav
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        onInputClick={() => setShowInput(true)}
+                    />
+                </div>
+            );
+
+            const renderFiles = () => (
+                <div className="h-full flex flex-col">
+                    <div className="px-5 pt-14 pb-5">
+                        <h1 className="text-morandi-text font-bold text-2xl">📂 文件</h1>
+                    </div>
+                    <div className="flex-1 overflow-y-auto px-5 pb-32">
+                        {items.files.map((item, idx) => (
+                            <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                <div className="bg-white/80 backdrop-blur rounded-3xl p-5 mb-3 shadow-soft border border-white/60 flex items-center">
+                                    <div className={`w-14 h-14 rounded-2xl ${
+                                        item.type === 'image' ? 'icon-gradient-1' : 'icon-gradient-4'
+                                    } flex items-center justify-center mr-4 shadow-glow`}>
+                                        <span className="text-2xl">{item.type === 'image' ? '🖼️' : '📄'}</span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-morandi-text font-bold text-base">{item.name}</h3>
+                                        <p className="text-morandi-textSecondary text-sm">{item.size}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <BottomNav
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        onInputClick={() => setShowInput(true)}
+                    />
+                </div>
+            );
+
+            const renderSearch = () => (
+                <div className="h-full flex flex-col">
+                    <SearchBar
+                        value={searchValue}
+                        onChange={(e) => setSearchValue(e.target.value)}
+                        onFocus={() => {}}
+                    />
+                    <div className="flex-1 overflow-y-auto px-5 pb-32 pt-2">
+                        <h3 className="text-morandi-text font-bold text-lg mb-4 px-1">搜索结果</h3>
+                        <InspirationItem item={items.inspiration[0]} />
+                        <ScheduleItem item={items.schedule[0]} />
+                    </div>
+                    <BottomNav
+                        activeTab={activeTab}
+                        onTabChange={handleTabChange}
+                        onInputClick={() => setShowInput(true)}
+                    />
+                </div>
+            );
+
+            return (
+                <div className="h-full flex flex-col relative overflow-hidden">
+                    <div className="notch"></div>
+                    {screen === 'home' && renderHome()}
+                    {screen === 'detail' && renderDetail()}
+                    {screen === 'calendar' && renderCalendar()}
+                    {screen === 'files' && renderFiles()}
+                    {screen === 'search' && renderSearch()}
+
+                    <InputModal
+                        show={showInput}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onSubmit={handleSubmit}
+                        loading={loading}
+                        onClose={() => {
+                            setShowInput(false);
+                            setInputValue('');
+                        }}
+                    />
+
+                    <AIPreviewModal
+                        show={showPreview}
+                        result={aiResult}
+                        onConfirm={handleConfirm}
+                        onCancel={() => setShowPreview(false)}
+                    />
+
+                    <SuccessToast show={showSuccess} message="已归档到 📅 日程" />
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

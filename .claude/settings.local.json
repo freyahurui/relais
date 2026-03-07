@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"E:\\\\PhD\\\\Coding\\\\test\\\\Sortie_UI_RealData.html\")",
+      "Bash(node:*)"
+    ]
+  }
+}
