@@ -1,6 +1,6 @@
 //
 //  Color+Hex.swift
-//  Sortie
+//  Relais
 //
 //  Created on 2025-02-15.
 //
@@ -73,8 +73,8 @@ extension Color {
 // MARK: - Predefined Colors
 
 extension Color {
-    /// Sortie app predefined colors
-    enum Sortie {
+    /// Relais app predefined colors
+    enum Relais {
         static let primary = Color(hex: "#FF6B6B")
         static let secondary = Color(hex: "#4ECDC4")
         static let background = Color(hex: "#1A1A2E")
@@ -221,9 +221,9 @@ struct ColorHex_Previews: PreviewProvider {
         VStack(spacing: 20) {
             // Predefined colors
             HStack(spacing: 16) {
-                ColorBox(name: "Primary", color: .Sortie.primary)
-                ColorBox(name: "Secondary", color: .Sortie.secondary)
-                ColorBox(name: "Background", color: .Sortie.background)
+                ColorBox(name: "Primary", color: .Relais.primary)
+                ColorBox(name: "Secondary", color: .Relais.secondary)
+                ColorBox(name: "Background", color: .Relais.background)
             }
 
             // Custom hex colors
@@ -252,7 +252,7 @@ struct ColorHex_Previews: PreviewProvider {
             }
         }
         .padding()
-        .background(Color.Sortie.background)
+        .background(Color.Relais.background)
     }
 }
 
@@ -268,7 +268,7 @@ struct ColorBox: View {
 
             Text(name)
                 .font(.caption)
-                .foregroundColor(.Sortie.textSecondary)
+                .foregroundColor(.Relais.textSecondary)
         }
     }
 }

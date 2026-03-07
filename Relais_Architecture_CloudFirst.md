@@ -1,4 +1,4 @@
-# Sortie 架构设计 - 云端优先版本
+# Relais 架构设计 - 云端优先版本
 
 ## 版本策略
 
@@ -540,7 +540,7 @@ struct ItemRow: View {
 
 ```swift
 @main
-struct SortieApp: SwiftUI.App {
+struct RelaisApp: SwiftUI.App {
     @StateObject private var authState = AuthState()
 
     init() {
@@ -728,7 +728,7 @@ class DebouncedRepository {
 ## 错误处理
 
 ```swift
-enum SortieError: LocalizedError {
+enum RelaisError: LocalizedError {
     case notAuthenticated
     case networkError(Error)
     case serverError(message: String)
@@ -753,7 +753,7 @@ class ItemsViewModel {
     func loadItems() async {
         do {
             items = try await repository.fetchItems()
-        } catch let error as SortieError {
+        } catch let error as RelaisError {
             errorMessage = error.errorDescription
         } catch {
             errorMessage = "未知错误"

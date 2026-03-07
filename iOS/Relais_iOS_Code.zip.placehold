@@ -1,5 +1,5 @@
 // ============================================
-// Sortie iOS Project - Core Code Files
+// Relais iOS Project - Core Code Files
 // ============================================
 // 按照文件夹结构创建以下文件
 // ============================================
@@ -1139,7 +1139,7 @@ struct LoginView: View {
 
             // Logo & Title
             VStack(spacing: 16) {
-                Text("Sortie")
+                Text("Relais")
                     .font(.system(size: 48, weight: .bold))
                     .foregroundStyle(
                         LinearGradient(

@@ -1,6 +1,6 @@
 //
-//  SortieApp.swift
-//  Sortie
+//  RelaisApp.swift
+//  Relais
 //
 //  Created on 2025-02-15.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct SortieApp: App {
+struct RelaisApp: App {
     @StateObject private var authViewModel = AuthViewModel()
 
     var body: some Scene {

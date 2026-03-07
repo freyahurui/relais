@@ -1,6 +1,6 @@
 //
 //  HomeView.swift
-//  Sortie
+//  Relais
 //
 //  Created on 2025-02-15.
 //
@@ -39,7 +39,7 @@ struct HomeView: View {
                     itemsSection
                 }
             }
-            .navigationTitle("Sortie")
+            .navigationTitle("Relais")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {

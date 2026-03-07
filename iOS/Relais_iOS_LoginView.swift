@@ -1,6 +1,6 @@
 //
 //  LoginView.swift
-//  Sortie
+//  Relais
 //
 //  Created on 2025-02-15.
 //
@@ -45,11 +45,11 @@ struct LoginView: View {
                         .font(.system(size: 80))
                         .foregroundColor(Color(hex: "#FF6B6B"))
 
-                    Text("Sortie")
+                    Text("Relais")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
 
-                    Text(viewModel.isSignUp ? "创建您的账户" : "欢迎使用 Sortie")
+                    Text(viewModel.isSignUp ? "创建您的账户" : "欢迎使用 Relais")
                         .font(.system(size: 16))
                         .foregroundColor(Color(hex: "#9CA3AF"))
                 }

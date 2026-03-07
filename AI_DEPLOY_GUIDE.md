@@ -1,4 +1,4 @@
-# Sortie AI识别功能 - 部署指南
+# Relais AI识别功能 - 部署指南
 
 ## 文件结构
 
@@ -8,7 +8,7 @@ E:\PhD\Coding\test\
 │   └── functions\
 │       └── ai-parse\
 │           └── index.ts          # Supabase Edge Function
-├── Sortie_UI_RealData.html       # 前端页面（已更新）
+├── Relais_UI_RealData.html       # 前端页面（已更新）
 └── AI_DEPLOY_GUIDE.md            # 本文档
 ```
 
@@ -62,7 +62,7 @@ supabase functions deploy ai-parse
 
 ### 方法1：在网页中测试
 
-1. 打开 `Sortie_UI_RealData.html`
+1. 打开 `Relais_UI_RealData.html`
 2. 登录后点击 **+** 添加内容
 3. 输入测试内容：
    - `明天下午3点开会，地点在会议室A`
