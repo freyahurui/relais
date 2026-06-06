@@ -43,3 +43,9 @@ Thumbs.db
 # Already in code but good practice to ignore any future key files
 *.key
 secrets/
+
+# Local tool configs
+.claude/
+
+# Deploy scripts with project IDs
+deploy-function.js
