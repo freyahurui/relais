@@ -6,9 +6,9 @@
 
 ## 中文
 
-驿站 — 一款 AI 增强的智能备忘录工具。
+驿站 — 一款 AI 增强的智能信息中转站。
 
-一个智能信息中转站：随手粘贴，AI 自动分类存放，消息、日程、待办各取所需，告别备忘录和聊天框的杂乱存储。
+随手粘贴，AI 自动分类存放并解析关键信息，灵感、日程、待办各取所需，告别备忘录和聊天框的杂乱存储。
 
 **名称由来**：Relais 源自法语，意为"驿站"或"中继站"，寓意临时存放、各取所需的信息中转体验。
 
@@ -49,9 +49,9 @@ relais/
 
 ## English
 
-Relais — An AI-enhanced smart memo tool.
+Relais — An AI-enhanced smart information relay.
 
-A smart information relay: paste anything, and AI automatically categorizes it. Messages, schedules, to-dos — each finds its place. Say goodbye to cluttered memos and chat histories.
+Just paste, and AI automatically categorizes and parses key information. Ideas, schedules, to-dos — each finds its place. Say goodbye to cluttered memos and chat histories.
 
 **Origin**: Relais comes from French, meaning "relay station" or "waystation," symbolizing a temporary storage where information is deposited and retrieved as needed.
 
