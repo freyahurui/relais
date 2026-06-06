@@ -2,8 +2,8 @@
 // 部署位置: supabase/functions/ai-parse/index.ts
 // @deno-types="https://deno.land/std@0.208.0/types/n.d.ts"
 
-const ZHIPU_API_KEY = '4902f068437c4f108ee871e3adb437f2.EXSix77PhomzZcLJ'
-const ZHIPU_API_URL = 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const API_KEY = 'REDACTED'
+const API_URL = 'https://api.openai-next.com/v1/chat/completions'
 
 // CORS 头配置
 const corsHeaders = {
@@ -13,31 +13,33 @@ const corsHeaders = {
 }
 
 // AI提示词 - 用于内容分类和信息提取
-const AI_SYSTEM_PROMPT = `你是一个智能内容分类助手。请分析用户输入的内容，判断它的格式类型和文件分类，并提取相关信息。
+const AI_SYSTEM_PROMPT = `你是一个智能内容分类助手。请分析用户输入的内容，完成以下三件事：
 
-【格式类型定义】（必选其一）：
-1. schedule (日程) - 有具体时间安排的活动、会议、约会
-2. todo (待办) - 需要完成的任务，通常有截止日期
-3. note (笔记) - 普通文本记录、想法、备忘等
+1. 生成标题：为内容提炼一个简洁的标题（10字以内），抓住核心含义，不要简单截取原文。
+2. 判断格式类型（必选其一）：
+   - schedule (日程) - 有具体时间安排的活动、会议、约会
+   - todo (待办) - 需要完成的任务，通常有截止日期
+   - note (笔记) - 普通文本记录、想法、备忘等
+3. 判断文件分类（根据内容性质自动选择）：
+   - 💡 灵感：创意想法、灵感、心得体会
+   - 💼 工作：工作相关的内容、会议、项目
+   - 📚 学习：学习笔记、阅读记录、课程相关
+   - 🏠 生活：日常生活、购物清单、个人事项
+4. 提取时间和地点信息
 
-【文件分类定义】（根据内容性质自动选择文件夹）：
-- 💡 灵感：创意想法、灵感、心得体会
-- 💼 工作：工作相关的内容、会议、项目
-- 📚 学习：学习笔记、阅读记录、课程相关
-- 🏠 生活：日常生活、购物清单、个人事项
-
-请以JSON格式返回，包含以下字段：
+请严格以以下JSON格式返回（不要输出其他任何内容）：
 {
+  "title": "提炼的标题，10字以内",
   "formatType": "schedule|todo|note",
   "folderCategory": "💡灵感|💼工作|📚学习|🏠生活",
-  "dueDate": "ISO格式的日期时间或null",       // 待办的截止日期
-  "startTime": "ISO格式的日期时间或null",     // 日程开始时间
-  "endTime": "ISO格式的日期时间或null",       // 日程结束时间
-  "location": "地点名称或null",                // 日程地点
-  "confidence": 0.0-1.0                       // 置信度
+  "dueDate": "ISO格式的日期时间或null",
+  "startTime": "ISO格式的日期时间或null",
+  "endTime": "ISO格式的日期时间或null",
+  "location": "地点名称或null"
 }
 
 规则：
+- title字段必须填写，不能为空。要提炼核心含义，例如"明天下午3点开会"→标题为"下午开会"
 - 如果提到"明天"、"下周"、"下午3点"等相对时间，请转换为绝对时间（使用当前日期）
 - 如果没有明确时间，dueDate/startTime/endTime设为null
 - schedule类型：有具体开始时间的活动
@@ -48,27 +50,29 @@ const AI_SYSTEM_PROMPT = `你是一个智能内容分类助手。请分析用户
 
 示例：
 输入："明天下午3点开会，地点在会议室A"
-输出：{"formatType":"schedule","folderCategory":"💼工作","startTime":"2026-03-05T15:00:00","endTime":null,"location":"会议室A","confidence":0.95}
+{"title":"下午开会","formatType":"schedule","folderCategory":"💼工作","startTime":"2026-03-05T15:00:00","endTime":null,"location":"会议室A"}
 
 输入："完成项目报告，本周五截止"
-输出：{"formatType":"todo","folderCategory":"💼工作","dueDate":"2026-03-07T23:59:59","startTime":null,"endTime":null,"location":null,"confidence":0.9}
+{"title":"完成项目报告","formatType":"todo","folderCategory":"💼工作","dueDate":"2026-03-07T23:59:59","startTime":null,"endTime":null,"location":null}
 
 输入："突然想到一个好点子"
-输出：{"formatType":"note","folderCategory":"💡灵感","dueDate":null,"startTime":null,"endTime":null,"location":null,"confidence":0.85}
+{"title":"灵感记录","formatType":"note","folderCategory":"💡灵感","dueDate":null,"startTime":null,"endTime":null,"location":null}
 
 输入：《三体》读后感：这是一部关于宇宙社会学的科幻小说
-输出：{"formatType":"note","folderCategory":"📚学习","dueDate":null,"startTime":null,"endTime":null,"location":null,"confidence":0.9}
+{"title":"《三体》读后感","formatType":"note","folderCategory":"📚学习","dueDate":null,"startTime":null,"endTime":null,"location":null}
 
 输入："周末去超市购物清单：牛奶、面包、鸡蛋"
-输出：{"formatType":"note","folderCategory":"🏠生活","dueDate":null,"startTime":null,"endTime":null,"location":null,"confidence":0.9}
+{"title":"超市购物","formatType":"todo","folderCategory":"🏠生活","dueDate":null,"startTime":null,"endTime":null,"location":null}
 `
 
-// 调用智谱AI API
-async function callZhipuAI(content: string): Promise<any> {
-  const currentDate = new Date().toISOString()
+// 调用AI API
+async function callAI(content: string): Promise<any> {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
 
   const requestBody = {
-    model: 'glm-4-flash',
+    model: 'gpt-5-mini',
     messages: [
       {
         role: 'system',
@@ -85,24 +89,24 @@ async function callZhipuAI(content: string): Promise<any> {
     stream: false
   }
 
-  const response = await fetch(ZHIPU_API_URL, {
+  const response = await fetch(API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${ZHIPU_API_KEY}`
+      'Authorization': `Bearer ${API_KEY}`
     },
     body: JSON.stringify(requestBody)
   })
 
   if (!response.ok) {
     const errorText = await response.text()
-    throw new Error(`智谱API调用失败: ${response.status} ${errorText}`)
+    throw new Error(`AI API调用失败: ${response.status} ${errorText}`)
   }
 
   const data = await response.json()
 
   if (!data.choices || data.choices.length === 0) {
-    throw new Error('智谱API返回无效响应')
+    throw new Error('AI API返回无效响应')
   }
 
   const aiResponse = data.choices[0].message.content
@@ -116,13 +120,13 @@ async function callZhipuAI(content: string): Promise<any> {
     console.error('AI响应解析失败:', aiResponse)
     // 返回默认值
     return {
+      title: '',
       formatType: 'note',
       folderCategory: '💡灵感',
       dueDate: null,
       startTime: null,
       endTime: null,
-      location: null,
-      confidence: 0.5
+      location: null
     }
   }
 }
@@ -146,8 +150,27 @@ Deno.serve(async (req) => {
 
   try {
     // 解析请求
-    const { itemId, userId } = await req.json()
+    const { itemId, userId, content } = await req.json()
 
+    // ===== 新模式：直接传入 content，返回 AI 解析结果（不写数据库）=====
+    if (content && !itemId) {
+      console.log('直接解析模式，内容:', content)
+      const aiResult = await callAI(content)
+      console.log('AI解析结果:', aiResult)
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          result: aiResult
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      )
+    }
+
+    // ===== 原有模式：通过 itemId 从数据库读取并解析 =====
     if (!itemId || !userId) {
       return new Response(
         JSON.stringify({ error: '缺少必要参数: itemId 或 userId' }),
@@ -220,7 +243,7 @@ Deno.serve(async (req) => {
     console.log('开始AI解析:', item.content)
 
     // 调用AI进行解析
-    const aiResult = await callZhipuAI(item.content || item.title)
+    const aiResult = await callAI(item.content || item.title)
     console.log('AI解析结果:', aiResult)
 
     // 获取用户的所有分类
@@ -283,6 +306,11 @@ Deno.serve(async (req) => {
       ai_parsed_data: aiResult,
       confidence_score: aiResult.confidence,
       source_type: 'ai_parsed'
+    }
+
+    // 如果AI生成了标题，更新标题
+    if (aiResult.title) {
+      updateData.title = aiResult.title
     }
 
     // 如果找到了匹配的分类，更新category_id

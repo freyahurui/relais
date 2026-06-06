@@ -640,7 +640,7 @@
         };
 
         // ==================== 登录界面 ====================
-        const LoginScreen = ({ onLogin, loading, error }) => {
+        const LoginScreen = ({ onLogin, loading, error, onForgotPassword }) => {
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [isSignUp, setIsSignUp] = useState(false);
@@ -654,7 +654,7 @@
             return (
                 <div className="h-full flex flex-col items-center justify-center px-8 pb-20">
                     <div className="w-20 h-20 bg-gradient-to-br from-morandi-accent to-morandi-group2 rounded-3xl flex items-center justify-center mb-6 shadow-glow scale-in">
-                        <span className="text-white text-4xl font-light">S</span>
+                        <span className="text-white text-4xl font-light">R</span>
                     </div>
 
                     <h1 className="text-morandi-text font-bold text-2xl mb-2">Relais</h1>
@@ -706,6 +706,16 @@
                         </button>
                     </form>
 
+                    {!isSignUp && (
+                        <button
+                            onClick={onForgotPassword}
+                            className="mt-4 text-morandi-textSecondary text-sm hover:text-morandi-accent transition-colors"
+                            disabled={loading}
+                        >
+                            忘记密码？
+                        </button>
+                    )}
+
                     <button
                         onClick={() => setIsSignUp(!isSignUp)}
                         className="mt-6 text-morandi-textSecondary text-sm"
@@ -713,6 +723,229 @@
                     >
                         {isSignUp ? '已有账户？点击登录' : '没有账户？点击注册'}
                     </button>
+                </div>
+            );
+        };
+
+        // ==================== 忘记密码 ====================
+        const ForgotPasswordScreen = ({ onBack }) => {
+            const [step, setStep] = useState(1); // 1: 输入邮箱, 2: 输入验证码, 3: 成功
+            const [email, setEmail] = useState('');
+            const [otp, setOtp] = useState('');
+            const [newPassword, setNewPassword] = useState('');
+            const [confirmPassword, setConfirmPassword] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState('');
+            const [countdown, setCountdown] = useState(0);
+
+            // 倒计时
+            useEffect(() => {
+                if (countdown > 0) {
+                    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                    return () => clearTimeout(timer);
+                }
+            }, [countdown]);
+
+            // 发送验证码
+            const handleSendOTP = async (e) => {
+                e.preventDefault();
+                if (!email.trim()) return;
+
+                setLoading(true);
+                setError('');
+                try {
+                    await fetch(`${SUPABASE_CONFIG.url}/auth/v1/otp`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.key,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ email: email.trim(), create_user: false })
+                    });
+                    setStep(2);
+                    setCountdown(60);
+                } catch (err) {
+                    setError('发送验证码失败，请重试');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            // 验证码 + 重置密码
+            const handleVerifyAndReset = async (e) => {
+                e.preventDefault();
+                if (!otp || !newPassword || !confirmPassword) return;
+
+                if (newPassword !== confirmPassword) {
+                    setError('两次输入的密码不一致');
+                    return;
+                }
+                if (newPassword.length < 6) {
+                    setError('密码至少需要6个字符');
+                    return;
+                }
+
+                setLoading(true);
+                setError('');
+                try {
+                    // 验证 OTP
+                    const verifyRes = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/verify`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.key,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            type: 'email',
+                            token: otp,
+                            email: email.trim()
+                        })
+                    });
+
+                    if (!verifyRes.ok) {
+                        const errData = await verifyRes.json();
+                        throw new Error(errData.error_description || errData.msg || '验证码错误');
+                    }
+
+                    const verifyData = await verifyRes.json();
+                    const accessToken = verifyData.access_token;
+
+                    // 更新密码
+                    const updateRes = await fetch(`${SUPABASE_CONFIG.url}/auth/v1/user`, {
+                        method: 'PUT',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.key,
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ password: newPassword })
+                    });
+
+                    if (!updateRes.ok) {
+                        const errData = await updateRes.json();
+                        throw new Error(errData.error_description || errData.msg || '密码重置失败');
+                    }
+
+                    setStep(3);
+                } catch (err) {
+                    setError(err.message || '操作失败，请重试');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="h-full flex flex-col items-center justify-center px-8 pb-20">
+                    <div className="w-20 h-20 bg-gradient-to-br from-morandi-accent to-morandi-group2 rounded-3xl flex items-center justify-center mb-6 shadow-glow">
+                        <span className="text-white text-4xl font-light">R</span>
+                    </div>
+
+                    <h1 className="text-morandi-text font-bold text-2xl mb-2">
+                        {step === 3 ? '重置成功' : '忘记密码'}
+                    </h1>
+                    <p className="text-morandi-textSecondary text-sm mb-8">
+                        {step === 1 && '输入您的邮箱地址获取验证码'}
+                        {step === 2 && '验证码已发送至您的邮箱'}
+                        {step === 3 && '密码已重置，请使用新密码登录'}
+                    </p>
+
+                    {error && (
+                        <div className="w-full mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm text-center">
+                            {error}
+                        </div>
+                    )}
+
+                    {step === 1 && (
+                        <form onSubmit={handleSendOTP} className="w-full space-y-4">
+                            <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="邮箱地址"
+                                    className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                    disabled={loading}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={!email.trim() || loading}
+                                className="w-full py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                {loading ? <><div className="spinner"></div><span>发送中...</span></> : <span>发送验证码</span>}
+                            </button>
+                        </form>
+                    )}
+
+                    {step === 2 && (
+                        <form onSubmit={handleVerifyAndReset} className="w-full space-y-4">
+                            <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                                <input
+                                    type="text"
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value)}
+                                    placeholder="6位验证码"
+                                    maxLength={6}
+                                    className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent text-center tracking-[0.5em]"
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    placeholder="新密码（至少6位）"
+                                    className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                    disabled={loading}
+                                />
+                            </div>
+                            <div className="bg-white/80 rounded-2xl p-4 shadow-soft border border-white/60">
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="确认新密码"
+                                    className="w-full outline-none text-morandi-text placeholder:text-morandi-textSecondary bg-transparent"
+                                    disabled={loading}
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={!otp || !newPassword || !confirmPassword || loading}
+                                className="w-full py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                            >
+                                {loading ? <><div className="spinner"></div><span>重置中...</span></> : <span>重置密码</span>}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { if (countdown === 0) handleSendOTP({ preventDefault: () => {} }); }}
+                                disabled={countdown > 0 || loading}
+                                className="w-full text-morandi-textSecondary text-sm disabled:opacity-50"
+                            >
+                                {countdown > 0 ? `重新发送 (${countdown}s)` : '重新发送验证码'}
+                            </button>
+                        </form>
+                    )}
+
+                    {step === 3 && (
+                        <button
+                            onClick={onBack}
+                            className="w-full py-4 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-2xl font-semibold hover:shadow-lg transition-all"
+                        >
+                            返回登录
+                        </button>
+                    )}
+
+                    {step !== 3 && (
+                        <button
+                            onClick={onBack}
+                            className="mt-6 text-morandi-textSecondary text-sm"
+                            disabled={loading}
+                        >
+                            返回登录
+                        </button>
+                    )}
                 </div>
             );
         };
@@ -951,7 +1184,8 @@
 
             const getDueDateText = () => {
                 if (item.scheduled_start) {
-                    const date = new Date(item.scheduled_start);
+                    const localStr = item.scheduled_start.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+                    const date = new Date(localStr);
                     const now = new Date();
                     const diffMs = date - now;
                     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
@@ -959,7 +1193,7 @@
                     if (diffDays < 0) return '已过期';
                     if (diffDays === 0) return '今天截止';
                     if (diffDays === 1) return '明天截止';
-                    if (diffDays < 7) return `${diffDays}天后截止`;
+                    if (diffDays < 7) return `${date.getMonth() + 1}月${date.getDate()}日截止`;
                     return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
                 }
                 return null;
@@ -993,7 +1227,8 @@
         const ScheduleItem = ({ item }) => {
             const formatDateTime = (dateStr) => {
                 if (!dateStr) return '';
-                const date = new Date(dateStr);
+                const localStr = dateStr.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+                const date = new Date(localStr);
                 const now = new Date();
                 const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                 const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -1010,7 +1245,7 @@
                 } else if (diffDays === -1) {
                     result = '昨天';
                 } else if (diffDays < -1) {
-                    result = `${Math.abs(diffDays)}天前`;
+                    result = `${date.getMonth() + 1}月${date.getDate()}日`;
                 } else if (diffDays < 7) {
                     const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
                     result = weekdays[date.getDay()];
@@ -1057,14 +1292,221 @@
         };
 
         // ==================== 灵感项组件 ====================
-        const NoteItem = ({ item }) => (
-            <div className="p-4">
-                <h3 className="text-morandi-text font-bold text-base mb-2">{item.title}</h3>
-                {item.content && (
-                    <p className="text-morandi-textSecondary text-sm leading-relaxed line-clamp-2">{item.content}</p>
-                )}
-            </div>
-        );
+        const NoteItem = ({ item }) => {
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = new Date(dateStr);
+                return `${d.getMonth() + 1}月${d.getDate()}日`;
+            };
+            return (
+                <div className="p-4">
+                    <h3 className="text-morandi-text font-bold text-base mb-2">{item.title}</h3>
+                    {item.content && (
+                        <p className="text-morandi-textSecondary text-sm leading-relaxed line-clamp-2">{item.content}</p>
+                    )}
+                    {item.created_at && (
+                        <p className="text-xs text-morandi-textSecondary/60 mt-2">{formatDate(item.created_at)}</p>
+                    )}
+                </div>
+            );
+        };
+
+        // ==================== AI确认页面 ====================
+        const AIConfirmScreen = ({ show, aiResult, content, categories, onConfirm, onCancel, loading }) => {
+            const [editTitle, setEditTitle] = useState('');
+            const [editType, setEditType] = useState('note');
+            const [editCategory, setEditCategory] = useState('');
+
+            // AI 解析的时间/地点（只读）
+            const parsedDueDate = aiResult?.dueDate;
+            const parsedStartTime = aiResult?.startTime;
+            const parsedEndTime = aiResult?.endTime;
+            const parsedLocation = aiResult?.location;
+
+            useEffect(() => {
+                if (aiResult) {
+                    setEditTitle(aiResult.title || '');
+                    setEditType(aiResult.formatType || 'note');
+
+                    // 匹配分类
+                    if (aiResult.folderCategory && categories.length > 0) {
+                        const aiEmoji = aiResult.folderCategory.substring(0, 2);
+                        const matched = categories.find(c => c.emoji === aiEmoji || c.emoji === aiResult.folderCategory);
+                        if (matched) {
+                            setEditCategory(matched.id);
+                        } else {
+                            const defaultCat = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+                            setEditCategory(defaultCat?.id || '');
+                        }
+                    } else {
+                        const defaultCat = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+                        setEditCategory(defaultCat?.id || '');
+                    }
+                }
+            }, [aiResult]);
+
+            if (!show) return null;
+
+            const handleConfirm = () => {
+                const result = {
+                    title: editTitle || content.split('\n')[0].substring(0, 50) || '无标题',
+                    formatType: editType,
+                    categoryId: editCategory,
+                    location: parsedLocation || ''
+                };
+
+                if (editType === 'todo' && parsedDueDate) {
+                    result.dueDate = parsedDueDate;
+                }
+                if (editType === 'schedule') {
+                    if (parsedStartTime) result.startTime = parsedStartTime;
+                    if (parsedEndTime) result.endTime = parsedEndTime;
+                }
+
+                onConfirm(result);
+            };
+
+            const formatDisplayDate = (isoStr) => {
+                if (!isoStr) return '';
+                // 去掉时区后缀（Z 或 +08:00），确保按本地时间解析
+                const localStr = isoStr.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+                const d = new Date(localStr);
+                const month = d.getMonth() + 1;
+                const day = d.getDate();
+                const hours = d.getHours().toString().padStart(2, '0');
+                const minutes = d.getMinutes().toString().padStart(2, '0');
+                return `${month}月${day}日 ${hours}:${minutes}`;
+            };
+
+            const selectedCatName = categories.find(c => c.id === editCategory)?.name || '';
+
+            return (
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-end justify-center" style={{ zIndex: 250 }}>
+                    <div className="bg-morandi-bg w-full rounded-t-[36px] slide-up shadow-2xl" style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div className="sticky top-0 bg-morandi-bg z-10 p-6 pb-3">
+                            <div className="w-12 h-1.5 bg-morandi-card rounded-full mx-auto mb-4"></div>
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-morandi-text font-bold text-xl">AI 分析结果</h2>
+                                <button onClick={onCancel} className="w-10 h-10 rounded-full bg-morandi-card text-morandi-text flex items-center justify-center">✕</button>
+                            </div>
+                        </div>
+
+                        <div className="px-6 pb-6 space-y-4">
+                            {/* 标题（可编辑） */}
+                            <div>
+                                <label className="text-sm font-semibold text-morandi-textSecondary mb-2 block">标题</label>
+                                <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    className="w-full bg-white rounded-2xl p-3.5 text-morandi-text border border-white/60 outline-none focus:border-morandi-accent/40 text-[16px]"
+                                    placeholder="输入标题"
+                                />
+                            </div>
+
+                            {/* 类型下拉 */}
+                            <div>
+                                <label className="text-sm font-semibold text-morandi-textSecondary mb-2 block">类型</label>
+                                <div className="relative">
+                                    <select
+                                        value={editType}
+                                        onChange={(e) => setEditType(e.target.value)}
+                                        className="w-full bg-white rounded-2xl p-3.5 text-morandi-text border border-white/60 outline-none focus:border-morandi-accent/40 text-[16px] appearance-none pr-10"
+                                    >
+                                        <option value="schedule">📅 日程</option>
+                                        <option value="todo">✅ 待办</option>
+                                        <option value="note">📝 笔记</option>
+                                    </select>
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-morandi-textSecondary pointer-events-none">▾</span>
+                                </div>
+                            </div>
+
+                            {/* 分类下拉 */}
+                            <div>
+                                <label className="text-sm font-semibold text-morandi-textSecondary mb-2 block">分类</label>
+                                <div className="relative">
+                                    <select
+                                        value={editCategory}
+                                        onChange={(e) => setEditCategory(e.target.value)}
+                                        className="w-full bg-white rounded-2xl p-3.5 text-morandi-text border border-white/60 outline-none focus:border-morandi-accent/40 text-[16px] appearance-none pr-10"
+                                    >
+                                        {categories.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
+                                        ))}
+                                    </select>
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-morandi-textSecondary pointer-events-none">▾</span>
+                                </div>
+                            </div>
+
+                            {/* AI 解析的时间/地点信息 */}
+                            {editType === 'todo' && parsedDueDate && (
+                                <div className="bg-white/70 rounded-2xl p-4 border border-white/60">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-morandi-textSecondary">截止日期</span>
+                                        <span className="text-sm font-semibold text-morandi-text">{formatDisplayDate(parsedDueDate)}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {editType === 'schedule' && (
+                                <div className="bg-white/70 rounded-2xl p-4 border border-white/60 space-y-2">
+                                    {parsedStartTime && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-morandi-accent flex-shrink-0"></span>
+                                            <span className="text-sm text-morandi-textSecondary">开始</span>
+                                            <span className="text-sm font-semibold text-morandi-text">{formatDisplayDate(parsedStartTime)}</span>
+                                        </div>
+                                    )}
+                                    {parsedEndTime && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-2 h-2 rounded-full bg-morandi-group3 flex-shrink-0"></span>
+                                            <span className="text-sm text-morandi-textSecondary">结束</span>
+                                            <span className="text-sm font-semibold text-morandi-text">{formatDisplayDate(parsedEndTime)}</span>
+                                        </div>
+                                    )}
+                                    {parsedLocation && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex-shrink-0 text-sm">📍</span>
+                                            <span className="text-sm font-semibold text-morandi-text">{parsedLocation}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* 原始内容预览 */}
+                            <div>
+                                <label className="text-sm font-semibold text-morandi-textSecondary mb-2 block">原始内容</label>
+                                <div className="bg-white/50 rounded-2xl p-4 text-sm text-morandi-textSecondary leading-relaxed border border-white/60 max-h-32 overflow-y-auto">
+                                    {content}
+                                </div>
+                            </div>
+
+                            {/* 操作按钮 */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={onCancel}
+                                    className="flex-1 py-3.5 rounded-2xl bg-morandi-card text-morandi-text font-semibold text-base transition-all hover:bg-morandi-card/80"
+                                >
+                                    取消
+                                </button>
+                                <button
+                                    onClick={handleConfirm}
+                                    disabled={loading}
+                                    className="flex-1 py-3.5 rounded-2xl bg-morandi-accent text-white font-semibold text-base transition-all hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {loading ? (
+                                        <>
+                                            <span className="spinner"></span>
+                                            保存中...
+                                        </>
+                                    ) : '确认保存'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         // ==================== 分类管理页面 (支持拖拽) ====================
         const CategoryManageScreen = ({ categories, items, onBack, onAdd, onEdit, onDelete, onReorder, token, user }) => {
@@ -1358,6 +1800,7 @@
             const [token, setToken] = useState(null);
             const [authLoading, setAuthLoading] = useState(false);
             const [authError, setAuthError] = useState('');
+            const [showForgotPassword, setShowForgotPassword] = useState(false);
 
             // Data state
             const [categories, setCategories] = useState([]);
@@ -1379,6 +1822,11 @@
             const [successMessage, setSuccessMessage] = useState('');
             const [showItemDetail, setShowItemDetail] = useState(false);
             const [savingItem, setSavingItem] = useState(false);
+
+            // AI confirm state
+            const [aiPreviewResult, setAiPreviewResult] = useState(null);
+            const [showAIConfirm, setShowAIConfirm] = useState(false);
+            const [aiConfirmContent, setAiConfirmContent] = useState('');
 
             // Load data from localStorage on mount
             useEffect(() => {
@@ -1522,20 +1970,75 @@
                 setDataError('');
 
                 try {
-                    // 找到"灵感"分类作为默认分类
-                    const defaultCategory = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+                    // 直接调用 Edge Function 的 content 模式获取 AI 解析结果
+                    const functionUrl = `${SUPABASE_CONFIG.url}/functions/v1/ai-parse`;
 
+                    const response = await fetch(functionUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'apikey': SUPABASE_CONFIG.key,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content })
+                    });
+
+                    let aiResult = null;
+                    if (response.ok) {
+                        const data = await response.json();
+                        aiResult = data.result;
+                    } else {
+                        console.error('AI解析失败，使用默认值');
+                    }
+
+                    // 设置 AI 结果并显示确认页
+                    setAiPreviewResult(aiResult || { title: content.split('\n')[0].substring(0, 50), formatType: 'note', folderCategory: '💡灵感' });
+                    setAiConfirmContent(content);
+                    setShowAIConfirm(true);
+                    setShowInput(false);
+                    setInputValue('');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    // 即使 AI 失败，也用默认值显示确认页
+                    setAiPreviewResult({ title: content.split('\n')[0].substring(0, 50), formatType: 'note', folderCategory: '💡灵感' });
+                    setAiConfirmContent(content);
+                    setShowAIConfirm(true);
+                    setShowInput(false);
+                    setInputValue('');
+                } finally {
+                    setSaving(false);
+                }
+            };
+
+            // 用户确认保存
+            const handleConfirmSave = async (confirmData) => {
+                setSaving(true);
+                setDataError('');
+
+                try {
                     const newItem = {
                         user_id: user.id,
-                        category_id: defaultCategory?.id,
-                        title: content.split('\n')[0].substring(0, 50) || '无标题',
-                        content: content,
-                        item_type: 'note',
-                        source_type: 'manual'
+                        category_id: confirmData.categoryId,
+                        title: confirmData.title,
+                        content: aiConfirmContent,
+                        item_type: confirmData.formatType,
+                        source_type: 'ai_parsed'
                     };
 
-                    // 创建项目
-                    const createdItem = await apiRequest('/rest/v1/items', {
+                    // 根据格式类型添加特定字段
+                    if (confirmData.formatType === 'todo' && confirmData.dueDate) {
+                        newItem.scheduled_start = confirmData.dueDate;
+                    }
+                    if (confirmData.formatType === 'schedule') {
+                        if (confirmData.startTime) newItem.scheduled_start = confirmData.startTime;
+                        if (confirmData.endTime) newItem.scheduled_end = confirmData.endTime;
+                        if (confirmData.location) newItem.location = confirmData.location;
+                    }
+
+                    await apiRequest('/rest/v1/items', {
                         method: 'POST',
                         body: JSON.stringify(newItem),
                         headers: {
@@ -1543,20 +2046,10 @@
                         }
                     }, token);
 
-                    const itemId = createdItem[0]?.id;
-                    if (!itemId) {
-                        throw new Error('创建项目失败：未返回项目ID');
-                    }
-
-                    // 关闭输入弹窗并显示成功提示
-                    setShowInput(false);
-                    setInputValue('');
-                    showSuccessToast('保存成功，AI正在分析...');
-
-                    // 调用AI解析（异步，不阻塞用户操作）
-                    triggerAIParse(itemId);
-
-                    // 重新加载数据
+                    setShowAIConfirm(false);
+                    setAiPreviewResult(null);
+                    setAiConfirmContent('');
+                    showSuccessToast('保存成功！');
                     await loadData(token);
                 } catch (err) {
                     if (err.message === 'JWT_EXPIRED') {
@@ -1824,10 +2317,23 @@
 
             // Render login screen if not authenticated
             if (!user || !token) {
+                if (showForgotPassword) {
+                    return (
+                        <div className="h-full">
+                            <div className="notch"></div>
+                            <ForgotPasswordScreen onBack={() => { setShowForgotPassword(false); setAuthError(''); }} />
+                        </div>
+                    );
+                }
                 return (
                     <div className="h-full">
                         <div className="notch"></div>
-                        <LoginScreen onLogin={handleLogin} loading={authLoading} error={authError} />
+                        <LoginScreen
+                            onLogin={handleLogin}
+                            loading={authLoading}
+                            error={authError}
+                            onForgotPassword={() => { setShowForgotPassword(true); setAuthError(''); }}
+                        />
                     </div>
                 );
             }
@@ -2038,6 +2544,20 @@
                             setShowInput(false);
                             setInputValue('');
                         }}
+                    />
+
+                    <AIConfirmScreen
+                        show={showAIConfirm}
+                        aiResult={aiPreviewResult}
+                        content={aiConfirmContent}
+                        categories={categories}
+                        onConfirm={handleConfirmSave}
+                        onCancel={() => {
+                            setShowAIConfirm(false);
+                            setAiPreviewResult(null);
+                            setAiConfirmContent('');
+                        }}
+                        loading={saving}
                     />
 
                     <ItemDetailModal

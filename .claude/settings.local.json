@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(start \"\" \"E:\\\\PhD\\\\Coding\\\\test\\\\Sortie_UI_RealData.html\")",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebSearch",
+      "Bash(gh auth status:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nUpdate UI and clean up project files\n\n- Enhance Relais_UI_RealData.html with real data integration\n- Remove obsolete iOS code and architecture docs\n- Update ai-parse function and add Relais PRD\n- Update local settings\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
     ]
   }
 }
