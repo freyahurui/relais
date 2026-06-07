@@ -3,7 +3,7 @@
 // @deno-types="https://deno.land/std@0.208.0/types/n.d.ts"
 
 const API_KEY = Deno.env.get('AI_API_KEY')!
-const API_URL = 'https://api.openai-next.com/v1/chat/completions'
+const API_URL = 'https://api.deepseek.com/chat/completions'
 
 // CORS 头配置
 const corsHeaders = {
@@ -72,7 +72,7 @@ async function callAI(content: string): Promise<any> {
   const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`
 
   const requestBody = {
-    model: 'gpt-5-mini',
+    model: 'deepseek-v4-flash',
     messages: [
       {
         role: 'system',
