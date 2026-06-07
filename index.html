@@ -2155,7 +2155,7 @@
 
                 if (savedToken && savedUser) {
                     setToken(savedToken);
-                    setUser(JSON.parse(savedUser));
+                    try { setUser(JSON.parse(savedUser)); } catch(e) { localStorage.removeItem('sortie_user'); }
                     // Try to load data, if JWT expires it will be handled
                     loadData(savedToken).catch(() => {
                         // JWT already handled in loadData
@@ -2997,7 +2997,37 @@
             );
         };
 
-        ReactDOM.render(<App />, document.getElementById('root'));
+        // ==================== Error Boundary ====================
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+            static getDerivedStateFromError() {
+                return { hasError: true };
+            }
+            componentDidCatch(error, info) {
+                console.error('App error:', error, info);
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{ padding: '40px 20px', textAlign: 'center', color: '#4A4540' }}>
+                            <p style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</p>
+                            <p style={{ fontWeight: '600', marginBottom: '8px' }}>页面加载出错</p>
+                            <p style={{ fontSize: '14px', color: '#9B958C', marginBottom: '20px' }}>请尝试清除浏览器缓存后刷新页面</p>
+                            <button onClick={() => window.location.reload()}
+                                style={{ padding: '10px 24px', borderRadius: '16px', background: '#9CB4B8', color: 'white', border: 'none', fontWeight: '600' }}>
+                                刷新页面
+                            </button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        ReactDOM.render(<ErrorBoundary><App /></ErrorBoundary>, document.getElementById('root'));
     </script>
 </body>
 </html>
