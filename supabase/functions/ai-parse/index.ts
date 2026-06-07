@@ -2,7 +2,7 @@
 // 部署位置: supabase/functions/ai-parse/index.ts
 // @deno-types="https://deno.land/std@0.208.0/types/n.d.ts"
 
-const API_KEY = 'REDACTED'
+const API_KEY = Deno.env.get('AI_API_KEY')!
 const API_URL = 'https://api.openai-next.com/v1/chat/completions'
 
 // CORS 头配置
