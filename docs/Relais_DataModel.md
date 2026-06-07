@@ -114,6 +114,12 @@ Relais 采用混合存储策略，平衡用户体验与隐私保护：
 | is_completed | BOOLEAN | 完成状态 |
 | completed_at | TIMESTAMPTZ | 完成时间 |
 
+**归档字段**：
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| archived_at | TIMESTAMPTZ | 归档时间（NULL 表示未归档） |
+| is_auto_archived | BOOLEAN | 是否为系统自动归档（false = 用户手动归档） |
+
 **文件专用字段**：
 | 字段 | 类型 | 说明 |
 |------|------|------|

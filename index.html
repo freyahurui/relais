@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relais - 真实数据版本</title>
+    <title>Relais - 部署版本</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -198,6 +198,19 @@
             z-index: 1;
         }
 
+        /* Calendar cell interactions */
+        .cal-cell {
+            transition: background-color 0.15s ease;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+        .cal-cell:hover {
+            background-color: rgba(156, 180, 184, 0.08);
+        }
+        .cal-cell:active {
+            background-color: rgba(156, 180, 184, 0.18);
+        }
+
         /* Todo checkbox */
         .todo-checkbox {
             width: 24px;
@@ -255,6 +268,58 @@
         }
         .drag-over {
             border: 2px dashed #9CB4B8;
+        }
+
+        /* Archive button on cards */
+        .archive-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(156, 180, 184, 0.15);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            z-index: 10;
+            transition: background 0.2s ease;
+        }
+        .archive-btn:hover {
+            background: rgba(156, 180, 184, 0.3);
+        }
+
+        /* Toggle switch for settings */
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 28px;
+            background: #D4C8D4;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            flex-shrink: 0;
+        }
+        .toggle-switch.active {
+            background: #9CB4B8;
+        }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 24px;
+            height: 24px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+        }
+        .toggle-switch.active::after {
+            transform: translateX(20px);
         }
 
         /* Horizontal scroll for categories */
@@ -411,7 +476,7 @@
         );
 
         // ==================== 项目详情编辑弹窗 ====================
-        const ItemDetailModal = ({ show, item, onClose, onSave, onDelete, loading, categories }) => {
+        const ItemDetailModal = ({ show, item, onClose, onSave, onDelete, loading, categories, onArchive }) => {
             if (!show) return null;
 
             const [title, setTitle] = useState(item?.title || '');
@@ -494,6 +559,12 @@
                                 编辑{formatType === 'todo' ? '待办' : formatType === 'schedule' ? '日程' : '笔记'}
                             </h2>
                             <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => { onArchive(item); onClose(); }}
+                                    className="w-10 h-10 rounded-full bg-morandi-accent/80 text-white flex items-center justify-center hover:bg-morandi-accent transition-all shadow-sm"
+                                >
+                                    📦
+                                </button>
                                 <button
                                     onClick={handleDelete}
                                     className="w-10 h-10 rounded-full bg-red-400/80 text-white flex items-center justify-center hover:bg-red-500 transition-all shadow-sm"
@@ -658,7 +729,7 @@
                     </div>
 
                     <h1 className="text-morandi-text font-bold text-2xl mb-2">Relais</h1>
-                    <p className="text-morandi-textSecondary text-sm mb-8">智能备忘录</p>
+                    <p className="text-morandi-textSecondary text-sm mb-8">智能中转站</p>
 
                     {error && (
                         <ErrorBanner
@@ -1097,7 +1168,7 @@
         };
 
         // ==================== 可左滑删除的项目卡片 ====================
-        const SwipeableItem = ({ item, onDelete, onClick, children, onToggleComplete }) => {
+        const SwipeableItem = ({ item, onDelete, onClick, children, onToggleComplete, onArchive }) => {
             const [swipeX, setSwipeX] = useState(0);
             const [isDragging, setIsDragging] = useState(false);
             const startX = useRef(0);
@@ -1170,7 +1241,15 @@
                         className="swipe-content"
                         style={{ transform: `translateX(${swipeX}px)` }}
                     >
-                        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-white/60">
+                        <div className="bg-white/80 backdrop-blur rounded-3xl shadow-soft border border-white/60 relative">
+                            {onArchive && (
+                                <button
+                                    className="archive-btn"
+                                    onClick={(e) => { e.stopPropagation(); onArchive(item); }}
+                                >
+                                    📦
+                                </button>
+                            )}
                             {children}
                         </div>
                     </div>
@@ -1307,6 +1386,233 @@
                     {item.created_at && (
                         <p className="text-xs text-morandi-textSecondary/60 mt-2">{formatDate(item.created_at)}</p>
                     )}
+                </div>
+            );
+        };
+
+        // ==================== 日历视图组件 ====================
+        const CalendarView = ({ items, onItemClick, onToggleComplete, onDelete, activeTab, onTabChange, onInputClick, onArchive }) => {
+            const today = new Date();
+            const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+            const [selectedDate, setSelectedDate] = useState(new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+
+            // Parse date string as local date (strip Z and offset)
+            const parseAsLocalDate = (dateStr) => {
+                if (!dateStr) return null;
+                const localStr = dateStr.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
+                return new Date(localStr);
+            };
+
+            // Check if two dates are the same day
+            const isSameDay = (d1, d2) => {
+                return d1.getFullYear() === d2.getFullYear() &&
+                       d1.getMonth() === d2.getMonth() &&
+                       d1.getDate() === d2.getDate();
+            };
+
+            // Build map of day -> items for a given month (only todo & schedule)
+            const getItemsByDateInMonth = (year, month) => {
+                const map = new Map();
+                items.forEach(item => {
+                    if (item.item_type === 'note') return;
+                    let dateStr = null;
+                    if (item.item_type === 'todo' && item.scheduled_start) {
+                        dateStr = item.scheduled_start;
+                    } else if (item.item_type === 'schedule' && item.scheduled_start) {
+                        dateStr = item.scheduled_start;
+                    }
+                    if (!dateStr) return;
+                    const d = parseAsLocalDate(dateStr);
+                    if (!d) return;
+                    if (d.getFullYear() === year && d.getMonth() === month) {
+                        const day = d.getDate();
+                        if (!map.has(day)) map.set(day, []);
+                        map.get(day).push(item);
+                    }
+                });
+                return map;
+            };
+
+            // Get items for a specific date (only todo & schedule)
+            const getItemsForDate = (date) => {
+                return items.filter(item => {
+                    if (item.item_type === 'note') return false;
+                    let dateStr = null;
+                    if (item.item_type === 'todo' && item.scheduled_start) {
+                        dateStr = item.scheduled_start;
+                    } else if (item.item_type === 'schedule' && item.scheduled_start) {
+                        dateStr = item.scheduled_start;
+                    }
+                    if (!dateStr) return false;
+                    const d = parseAsLocalDate(dateStr);
+                    return d && isSameDay(d, date);
+                });
+            };
+
+            // Navigation helpers
+            const prevMonth = () => {
+                setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+            };
+            const nextMonth = () => {
+                setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+            };
+            const goToday = () => {
+                const now = new Date();
+                setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                setSelectedDate(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
+            };
+
+            // Calendar grid data
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0=Sun
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const itemsMap = getItemsByDateInMonth(year, month);
+
+            // Build calendar cells (include leading empty cells)
+            const cells = [];
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                cells.push(null);
+            }
+            for (let d = 1; d <= daysInMonth; d++) {
+                cells.push(d);
+            }
+
+            // Is the selected date within the currently displayed month?
+            const isDateInCurrentMonth = selectedDate.getFullYear() === year && selectedDate.getMonth() === month;
+
+            // Items to display: single date or entire month
+            let displayItems;
+            if (isDateInCurrentMonth) {
+                displayItems = getItemsForDate(selectedDate);
+            } else {
+                // Show all items for the month, sorted from last day to first
+                const allItems = [];
+                for (let d = daysInMonth; d >= 1; d--) {
+                    const dayItems = itemsMap.get(d);
+                    if (dayItems) allItems.push(...dayItems);
+                }
+                displayItems = allItems;
+            }
+            const now = new Date();
+
+            // Format month display
+            const monthLabel = `${year}年 ${month + 1}月`;
+            const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+
+            // Check if an item (todo) is overdue
+            const isTodoOverdue = (item) => {
+                if (item.item_type !== 'todo' || item.is_completed) return false;
+                if (!item.scheduled_start) return false;
+                const d = parseAsLocalDate(item.scheduled_start);
+                if (!d) return false;
+                const dueDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                return dueDate < todayDate;
+            };
+
+            return (
+                <div className="h-full flex flex-col">
+                    {/* Month Navigation Header */}
+                    <div className="px-5 pt-14 pb-3">
+                        <div className="flex items-center justify-between mb-2">
+                            <button onClick={prevMonth} className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center hover:bg-white/80 transition-colors">
+                                <span className="text-morandi-text text-lg">‹</span>
+                            </button>
+                            <h2 className="text-morandi-text font-bold text-lg">{monthLabel}</h2>
+                            <button onClick={nextMonth} className="w-10 h-10 rounded-full bg-white/60 flex items-center justify-center hover:bg-white/80 transition-colors">
+                                <span className="text-morandi-text text-lg">›</span>
+                            </button>
+                        </div>
+                        <div className="flex justify-center">
+                            <button onClick={goToday} className="text-xs text-morandi-textSecondary hover:text-morandi-accent transition-colors px-3 py-1 rounded-full hover:bg-morandi-accent/10">
+                                今天
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Weekday Headers */}
+                    <div className="grid grid-cols-7 px-3 mb-1">
+                        {weekdays.map((wd, i) => (
+                            <div key={i} className="text-center text-xs font-medium text-morandi-textSecondary py-1">
+                                {wd}
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7 px-3 gap-y-1">
+                        {cells.map((day, idx) => {
+                            if (day === null) {
+                                return <div key={`empty-${idx}`} className="h-12" />;
+                            }
+                            const cellDate = new Date(year, month, day);
+                            const isToday = isSameDay(cellDate, now);
+                            const isSelected = isDateInCurrentMonth && isSameDay(cellDate, selectedDate);
+                            const dayItems = itemsMap.get(day) || [];
+                            const hasSchedule = dayItems.some(it => it.item_type === 'schedule');
+                            const hasTodo = dayItems.some(it => it.item_type === 'todo');
+                            const hasOverdueTodo = dayItems.some(it => isTodoOverdue(it));
+
+                            return (
+                                <div
+                                    key={day}
+                                    className={`cal-cell h-12 flex flex-col items-center justify-center relative ${
+                                        isToday ? 'border border-morandi-accent/50 rounded-xl' : ''
+                                    } ${isSelected ? 'bg-morandi-accent/20 rounded-xl' : ''}`}
+                                    onClick={() => setSelectedDate(cellDate)}
+                                >
+                                    <span className={`text-sm ${isSelected ? 'font-bold text-morandi-text' : isToday ? 'font-semibold text-morandi-accent' : 'text-morandi-text'}`}>
+                                        {day}
+                                    </span>
+                                    {/* Dot indicators */}
+                                    {(hasSchedule || hasTodo) && (
+                                        <div className="flex gap-0.5 mt-0.5">
+                                            {hasSchedule && <span className="w-1.5 h-1.5 rounded-full bg-morandi-accent" />}
+                                            {hasOverdueTodo && <span className="w-1.5 h-1.5 rounded-full bg-morandi-error" />}
+                                            {hasTodo && !hasOverdueTodo && <span className="w-1.5 h-1.5 rounded-full bg-morandi-success" />}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="mx-5 my-3 border-t border-morandi-card" />
+
+                    {/* Items List */}
+                    <div className="flex-1 overflow-y-auto pb-32 px-5">
+                        {displayItems.length === 0 ? (
+                            <EmptyState
+                                icon="📅"
+                                title="暂无事项"
+                                description={isDateInCurrentMonth
+                                    ? `${selectedDate.getMonth() + 1}月${selectedDate.getDate()}日没有待办或日程`
+                                    : `${month + 1}月没有待办或日程`}
+                            />
+                        ) : (
+                            displayItems.map((item, idx) => (
+                                <div key={item.id} className="float-up" style={{ animationDelay: `${idx * 0.1}s`, opacity: 0 }}>
+                                    <SwipeableItem
+                                        item={item}
+                                        onDelete={onDelete}
+                                        onClick={onItemClick}
+                                        onToggleComplete={onToggleComplete}
+                                        onArchive={onArchive}
+                                    >
+                                        {item.item_type === 'todo' ? (
+                                            <TodoItem item={item} onToggleComplete={onToggleComplete} />
+                                        ) : (
+                                            <ScheduleItem item={item} />
+                                        )}
+                                    </SwipeableItem>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <BottomNav activeTab={activeTab} onTabChange={onTabChange} onInputClick={onInputClick} />
                 </div>
             );
         };
@@ -1610,15 +1916,13 @@
                                 onDragStart={(e) => handleDragStart(e, index)}
                                 onDragOver={(e) => handleDragOver(e, index)}
                                 onDragEnd={handleDragEnd}
-                                className={`bg-white/80 backdrop-blur rounded-3xl p-4 mb-3 shadow-soft border border-white/60 transition-all ${
+                                className={`bg-white/80 backdrop-blur rounded-3xl p-4 mb-3 shadow-soft border border-white/60 transition-all cursor-move ${
                                     draggedItem === index ? 'dragging' : ''
-                                } ${!cat.is_system ? 'cursor-move' : ''}`}
+                                }`}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center flex-1">
-                                        {!cat.is_system && (
-                                            <span className="text-morandi-textSecondary mr-3 text-lg">⋮⋮</span>
-                                        )}
+                                        <span className="text-morandi-textSecondary mr-3 text-lg">⋮⋮</span>
                                         <div
                                             className="w-12 h-12 rounded-2xl flex items-center justify-center mr-4 shadow-glow"
                                             style={{ background: `linear-gradient(135deg, ${cat.color}, ${cat.color}dd)` }}
@@ -1752,7 +2056,7 @@
         };
 
         // ==================== 设置页面 ====================
-        const SettingsScreen = ({ user, onLogout, onTabChange, onInputClick, onManageCategories }) => (
+        const SettingsScreen = ({ user, onLogout, onTabChange, onInputClick, onManageCategories, autoArchive, onToggleAutoArchive }) => (
             <div className="h-full flex flex-col">
                 <div className="px-5 pt-14 pb-5">
                     <h1 className="text-morandi-text font-bold text-2xl">⚙️ 设置</h1>
@@ -1780,6 +2084,17 @@
                         <span>📁</span>
                         <span>管理分类</span>
                     </button>
+
+                    <div className="bg-white/80 backdrop-blur rounded-2xl p-4 mb-3 shadow-soft border border-white/60 flex items-center justify-between">
+                        <div>
+                            <div className="text-morandi-text font-semibold">自动归档</div>
+                            <div className="text-morandi-textSecondary text-sm">完成后、过期的待办和日程自动隐藏</div>
+                        </div>
+                        <div
+                            className={`toggle-switch ${autoArchive ? 'active' : ''}`}
+                            onClick={onToggleAutoArchive}
+                        />
+                    </div>
 
                     <button
                         onClick={onLogout}
@@ -1822,6 +2137,11 @@
             const [successMessage, setSuccessMessage] = useState('');
             const [showItemDetail, setShowItemDetail] = useState(false);
             const [savingItem, setSavingItem] = useState(false);
+
+            // Auto archive state
+            const [autoArchive, setAutoArchive] = useState(() => {
+                return localStorage.getItem('sortie_auto_archive') === 'true';
+            });
 
             // AI confirm state
             const [aiPreviewResult, setAiPreviewResult] = useState(null);
@@ -1934,7 +2254,7 @@
                 try {
                     const [catsData, itemsData] = await Promise.all([
                         apiRequest('/rest/v1/categories?select=*&order=sort_order.asc', { method: 'GET' }, authToken),
-                        apiRequest('/rest/v1/items?select=*,categories(*)&deleted_at=is.null&order=created_at.desc', { method: 'GET' }, authToken)
+                        apiRequest('/rest/v1/items?select=*,categories(*)&deleted_at=is.null&archived_at=is.null&order=created_at.desc', { method: 'GET' }, authToken)
                     ]);
 
                     const categories = catsData || [];
@@ -1951,6 +2271,31 @@
                     }
 
                     setItems(itemsData || []);
+
+                    // Auto-archive overdue todos and schedules when autoArchive is enabled
+                    if (localStorage.getItem('sortie_auto_archive') === 'true' && itemsData && itemsData.length > 0) {
+                        const now = new Date().toISOString();
+                        const overdueIds = itemsData
+                            .filter(i => {
+                                if (i.item_type === 'todo') return !i.is_completed && i.scheduled_start && i.scheduled_start < now;
+                                if (i.item_type === 'schedule') {
+                                    const endTime = i.scheduled_end || i.scheduled_start;
+                                    return endTime && endTime < now;
+                                }
+                                return false;
+                            })
+                            .map(i => i.id);
+                        if (overdueIds.length > 0) {
+                            apiRequest(`/rest/v1/items?id=in.(${overdueIds.join(',')})`, {
+                                method: 'PATCH',
+                                body: JSON.stringify({ archived_at: now, is_auto_archived: true })
+                            }, authToken).then(() => {
+                                loadData(authToken);
+                            }).catch(err => {
+                                console.error('自动归档过期项目失败:', err);
+                            });
+                        }
+                    }
                 } catch (err) {
                     // Check if JWT expired
                     if (err.message === 'JWT_EXPIRED') {
@@ -2148,12 +2493,18 @@
             // Toggle todo complete
             const handleToggleComplete = async (item) => {
                 try {
+                    const patchData = {
+                        is_completed: !item.is_completed,
+                        completed_at: !item.is_completed ? new Date().toISOString() : null
+                    };
+                    // Auto-archive when completing a todo
+                    if (autoArchive && !item.is_completed) {
+                        patchData.archived_at = new Date().toISOString();
+                        patchData.is_auto_archived = true;
+                    }
                     await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
                         method: 'PATCH',
-                        body: JSON.stringify({
-                            is_completed: !item.is_completed,
-                            completed_at: !item.is_completed ? new Date().toISOString() : null
-                        })
+                        body: JSON.stringify(patchData)
                     }, token);
 
                     await loadData(token);
@@ -2183,6 +2534,66 @@
                         return;
                     }
                     alert('删除失败: ' + err.message);
+                }
+            };
+
+            // Archive item (user manual archive)
+            const handleArchiveItem = async (item) => {
+                try {
+                    await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
+                        method: 'PATCH',
+                        body: JSON.stringify({ archived_at: new Date().toISOString(), is_auto_archived: false })
+                    }, token);
+
+                    await loadData(token);
+                    showSuccessToast('已归档');
+                } catch (err) {
+                    if (err.message === 'JWT_EXPIRED') {
+                        handleJWTExpired();
+                        return;
+                    }
+                    alert('归档失败: ' + err.message);
+                }
+            };
+
+            // Toggle auto archive
+            const handleToggleAutoArchive = () => {
+                const newValue = !autoArchive;
+                setAutoArchive(newValue);
+                localStorage.setItem('sortie_auto_archive', String(newValue));
+                if (!newValue) {
+                    // Turning OFF: restore only auto-archived items
+                    apiRequest('/rest/v1/items?is_auto_archived=is.true', {
+                        method: 'PATCH',
+                        body: JSON.stringify({ archived_at: null, is_auto_archived: false })
+                    }, token).then(() => {
+                        loadData(token);
+                    }).catch(err => {
+                        console.error('恢复自动归档事项失败:', err);
+                    });
+                } else {
+                    // Turning ON: immediately auto-archive completed todos and overdue schedules
+                    const now = new Date().toISOString();
+                    const toArchiveIds = items
+                        .filter(i => {
+                            if (i.item_type === 'todo' && i.is_completed) return true;
+                            if (i.item_type === 'schedule') {
+                                const endTime = i.scheduled_end || i.scheduled_start;
+                                return endTime && endTime < now;
+                            }
+                            return false;
+                        })
+                        .map(i => i.id);
+                    if (toArchiveIds.length > 0) {
+                        apiRequest(`/rest/v1/items?id=in.(${toArchiveIds.join(',')})`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ archived_at: now, is_auto_archived: true })
+                        }, token).then(() => {
+                            loadData(token);
+                        }).catch(err => {
+                            console.error('自动归档失败:', err);
+                        });
+                    }
                 }
             };
 
@@ -2406,6 +2817,7 @@
                                             onDelete={handleDeleteItem}
                                             onClick={handleItemClick}
                                             onToggleComplete={handleToggleComplete}
+                                            onArchive={handleArchiveItem}
                                         >
                                             {item.item_type === 'todo' ? (
                                                 <TodoItem item={item} onToggleComplete={handleToggleComplete} />
@@ -2469,6 +2881,7 @@
                                             onDelete={handleDeleteItem}
                                             onClick={handleItemClick}
                                             onToggleComplete={handleToggleComplete}
+                                            onArchive={handleArchiveItem}
                                         >
                                             {item.item_type === 'todo' ? (
                                                 <TodoItem item={item} onToggleComplete={handleToggleComplete} />
@@ -2506,6 +2919,8 @@
                             onTabChange={handleTabChange}
                             onInputClick={() => setShowInput(true)}
                             onManageCategories={() => setScreen('categoryManage')}
+                            autoArchive={autoArchive}
+                            onToggleAutoArchive={handleToggleAutoArchive}
                         />
                     )}
                     {screen === 'categoryManage' && (
@@ -2522,10 +2937,16 @@
                         />
                     )}
                     {screen === 'calendar' && (
-                        <div className="h-full flex items-center justify-center">
-                            <EmptyState icon="📆" title="日历视图" description="即将推出" />
-                            <BottomNav activeTab={activeTab} onTabChange={handleTabChange} onInputClick={() => setShowInput(true)} />
-                        </div>
+                        <CalendarView
+                            items={items}
+                            onItemClick={handleItemClick}
+                            onToggleComplete={handleToggleComplete}
+                            onDelete={handleDeleteItem}
+                            activeTab={activeTab}
+                            onTabChange={handleTabChange}
+                            onInputClick={() => setShowInput(true)}
+                            onArchive={handleArchiveItem}
+                        />
                     )}
                     {screen === 'files' && (
                         <div className="h-full flex items-center justify-center">
@@ -2568,6 +2989,7 @@
                         onDelete={handleDeleteItem}
                         loading={savingItem}
                         categories={categories}
+                        onArchive={handleArchiveItem}
                     />
 
                     <SuccessToast show={showSuccess} message={successMessage} />

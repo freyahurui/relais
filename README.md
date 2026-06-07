@@ -16,6 +16,9 @@
 
 - **智能归档** — AI 自动判断内容类型（灵感 / 笔记 / 待办 / 日程），无需手动选择文件夹
 - **信息提取** — 自动识别时间、日期、地点等关键信息
+- **事项归档** — 支持手动归档和自动归档（完成后/过期待办自动隐藏），开关可控
+- **分类管理** — 预设 + 自定义分类，所有分类支持拖拽排序
+- **日历视图** — 按月查看日程和待办，日期点标记一览
 - **简约高效** — 粘贴即存，零负担记录
 
 ### 项目结构
@@ -59,6 +62,9 @@ Just paste, and AI automatically categorizes and parses key information. Ideas, 
 
 - **Smart Archiving** — AI auto-detects content type (ideas / notes / to-dos / schedules), no manual sorting needed
 - **Information Extraction** — Automatically identifies dates, times, locations, and other key details
+- **Item Archive** — Manual and auto-archiving (completed/overdue items auto-hide), toggle-controlled
+- **Category Management** — Preset + custom categories, all support drag-to-reorder
+- **Calendar View** — Monthly view of schedules and to-dos with date dot indicators
 - **Simple & Efficient** — Paste to save, zero-friction recording
 
 ### Project Structure
