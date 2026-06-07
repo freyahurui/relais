@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Relais - 部署版本</title>
+    <title>Relais - 智能信息中转站</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -268,6 +268,11 @@
         }
         .drag-over {
             border: 2px dashed #9CB4B8;
+        }
+        .drag-handle {
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
         }
 
         /* Archive button on cards */
@@ -1895,6 +1900,8 @@
             };
 
             // Drag and drop handlers
+            const touchStartY = useRef(0);
+
             const handleDragStart = (e, index) => {
                 setDraggedItem(index);
                 e.dataTransfer.effectAllowed = 'move';
@@ -1926,6 +1933,41 @@
                 await onReorder(updates);
             };
 
+            // Touch drag handlers for mobile
+            const handleTouchStart = (e, index) => {
+                touchStartY.current = e.touches[0].clientY;
+                setDraggedItem(index);
+            };
+
+            const handleTouchMove = (e) => {
+                e.preventDefault();
+                if (draggedItem === null) return;
+
+                const touchY = e.touches[0].clientY;
+                const elements = document.querySelectorAll('[data-cat-index]');
+                for (let i = 0; i < elements.length; i++) {
+                    const rect = elements[i].getBoundingClientRect();
+                    if (touchY > rect.top && touchY < rect.bottom) {
+                        const targetIndex = parseInt(elements[i].dataset.catIndex);
+                        if (targetIndex !== draggedItem) {
+                            const newCategories = [...localCategories];
+                            const draggedCategory = newCategories[draggedItem];
+                            newCategories.splice(draggedItem, 1);
+                            newCategories.splice(targetIndex, 0, draggedCategory);
+                            setLocalCategories(newCategories);
+                            setDraggedItem(targetIndex);
+                        }
+                        break;
+                    }
+                }
+            };
+
+            const handleTouchEnd = () => {
+                if (draggedItem !== null) {
+                    handleDragEnd();
+                }
+            };
+
             return (
                 <div className="h-full flex flex-col">
                     <div className="flex items-center px-5 pt-14 pb-5">
@@ -1950,11 +1992,15 @@
                         {localCategories.map((cat, index) => (
                             <div
                                 key={cat.id}
+                                data-cat-index={index}
                                 draggable={true}
                                 onDragStart={(e) => handleDragStart(e, index)}
                                 onDragOver={(e) => handleDragOver(e, index)}
                                 onDragEnd={handleDragEnd}
-                                className={`bg-white/80 backdrop-blur rounded-3xl p-4 mb-3 shadow-soft border border-white/60 transition-all cursor-move ${
+                                onTouchStart={(e) => handleTouchStart(e, index)}
+                                onTouchMove={handleTouchMove}
+                                onTouchEnd={handleTouchEnd}
+                                className={`drag-handle bg-white/80 backdrop-blur rounded-3xl p-4 mb-3 shadow-soft border border-white/60 transition-all cursor-move ${
                                     draggedItem === index ? 'dragging' : ''
                                 }`}
                             >
@@ -2472,7 +2518,11 @@
                     }
 
                     // 设置 AI 结果并显示确认页
-                    setAiPreviewResult(aiResult || { title: content.split('\n')[0].substring(0, 50), formatType: 'note', folderCategory: '💡灵感' });
+                    const fallbackTitle = content.split('\n')[0].substring(0, 50);
+                    if (aiResult && !aiResult.title) {
+                        aiResult.title = fallbackTitle;
+                    }
+                    setAiPreviewResult(aiResult || { title: fallbackTitle, formatType: 'note', folderCategory: '💡灵感' });
                     setAiConfirmContent(content);
                     setShowAIConfirm(true);
                     setShowInput(false);
