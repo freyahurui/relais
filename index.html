@@ -280,8 +280,8 @@
             position: absolute;
             top: 8px;
             right: 8px;
-            width: 32px;
-            height: 32px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: rgba(156, 180, 184, 0.15);
             border: none;
@@ -289,7 +289,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 18px;
             z-index: 10;
             transition: background 0.2s ease;
         }
@@ -546,7 +546,7 @@
             const formatTypeLabels = {
                 'schedule': '📅 日程',
                 'todo': '✅ 待办',
-                'note': '📝 笔记'
+                'note': '💡 灵感'
             };
 
             return (
@@ -561,7 +561,7 @@
                                 ✕
                             </button>
                             <h2 className="text-morandi-text font-bold text-lg">
-                                编辑{formatType === 'todo' ? '待办' : formatType === 'schedule' ? '日程' : '笔记'}
+                                编辑{formatType === 'todo' ? '待办' : formatType === 'schedule' ? '日程' : '灵感'}
                             </h2>
                             <div className="flex items-center gap-2">
                                 <button
@@ -1411,7 +1411,7 @@
             );
         };
 
-        // ==================== 灵感项组件 ====================
+        // ==================== 灵感项组件（note 类型） ====================
         const NoteItem = ({ item }) => {
             const formatDate = (dateStr) => {
                 if (!dateStr) return '';
@@ -1682,11 +1682,11 @@
                         if (matched) {
                             setEditCategory(matched.id);
                         } else {
-                            const defaultCat = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+                            const defaultCat = categories.find(c => c.name === '工作' || c.emoji === '💼') || categories[0];
                             setEditCategory(defaultCat?.id || '');
                         }
                     } else {
-                        const defaultCat = categories.find(c => c.name === '灵感' || c.emoji === '💡') || categories[0];
+                        const defaultCat = categories.find(c => c.name === '工作' || c.emoji === '💼') || categories[0];
                         setEditCategory(defaultCat?.id || '');
                     }
                 }
@@ -1762,7 +1762,7 @@
                                     >
                                         <option value="schedule">📅 日程</option>
                                         <option value="todo">✅ 待办</option>
-                                        <option value="note">📝 笔记</option>
+                                        <option value="note">💡 灵感</option>
                                     </select>
                                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-morandi-textSecondary pointer-events-none">▾</span>
                                 </div>
@@ -2137,8 +2137,8 @@
             );
         };
 
-        // ==================== 回收站页面 ====================
-        const TrashScreen = ({ items, loading, onRestore, onBack }) => (
+        // ==================== 归档页面 ====================
+        const ArchiveScreen = ({ items, loading, onRestore, onBack }) => (
             <div className="h-full flex flex-col">
                 <div className="px-5 pt-14 pb-4 flex items-center gap-3">
                     <button
@@ -2147,7 +2147,7 @@
                     >
                         ←
                     </button>
-                    <h1 className="text-morandi-text font-bold text-2xl">🗑️ 回收站</h1>
+                    <h1 className="text-morandi-text font-bold text-2xl">📦 归档</h1>
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 pb-32">
@@ -2157,9 +2157,9 @@
                         </div>
                     ) : items.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16">
-                            <span className="text-6xl mb-4 opacity-50">✨</span>
-                            <h3 className="text-morandi-text font-bold text-lg mb-2">回收站是空的</h3>
-                            <p className="text-morandi-textSecondary text-sm">删除的事项会出现在这里</p>
+                            <span className="text-6xl mb-4 opacity-50">📭</span>
+                            <h3 className="text-morandi-text font-bold text-lg mb-2">暂无归档</h3>
+                            <p className="text-morandi-textSecondary text-sm">归档的事项会出现在这里</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -2169,7 +2169,7 @@
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-morandi-text font-semibold text-sm truncate">{item.title}</h3>
                                             <p className="text-morandi-textSecondary text-xs mt-1">
-                                                {item.deleted_at ? new Date(item.deleted_at.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '')).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' 删除' : ''}
+                                                {item.archived_at ? new Date(item.archived_at.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '')).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' 归档' : ''}
                                             </p>
                                         </div>
                                         <button
@@ -2188,7 +2188,7 @@
         );
 
         // ==================== 设置页面 ====================
-        const SettingsScreen = ({ user, onLogout, onTabChange, onInputClick, onManageCategories, onOpenTrash, autoArchive, onToggleAutoArchive }) => (
+        const SettingsScreen = ({ user, onLogout, onTabChange, onInputClick, onManageCategories, onOpenArchive, autoArchive, onToggleAutoArchive }) => (
             <div className="h-full flex flex-col">
                 <div className="px-5 pt-14 pb-5">
                     <h1 className="text-morandi-text font-bold text-2xl">⚙️ 设置</h1>
@@ -2218,11 +2218,11 @@
                     </button>
 
                     <button
-                        onClick={onOpenTrash}
+                        onClick={onOpenArchive}
                         className="w-full bg-white/80 text-morandi-text py-4 rounded-2xl font-semibold border border-white/60 mb-3 flex items-center justify-center gap-2 shadow-soft"
                     >
-                        <span>🗑️</span>
-                        <span>回收站</span>
+                        <span>📦</span>
+                        <span>归档</span>
                     </button>
 
                     <div className="bg-white/80 backdrop-blur rounded-2xl p-4 mb-3 shadow-soft border border-white/60 flex items-center justify-between">
@@ -2264,9 +2264,9 @@
             const [itemsLoading, setItemsLoading] = useState(false);
             const [dataError, setDataError] = useState('');
 
-            // Trash state
-            const [trashItems, setTrashItems] = useState([]);
-            const [trashLoading, setTrashLoading] = useState(false);
+            // Archive state
+            const [archivedItems, setArchivedItems] = useState([]);
+            const [archiveLoading, setArchiveLoading] = useState(false);
 
             // UI state
             const [screen, setScreen] = useState('home');
@@ -2398,10 +2398,9 @@
             // Create default categories for new users
             const createDefaultCategories = async (authToken) => {
                 const defaultCategories = [
-                    { name: '灵感', emoji: '💡', color: '#D4C8D4', sort_order: 1 },
-                    { name: '工作', emoji: '💼', color: '#9CB4B8', sort_order: 2 },
-                    { name: '学习', emoji: '📚', color: '#B8C4A8', sort_order: 3 },
-                    { name: '生活', emoji: '🏠', color: '#C8B8A8', sort_order: 4 }
+                    { name: '工作', emoji: '💼', color: '#9CB4B8', sort_order: 1 },
+                    { name: '学习', emoji: '📚', color: '#B8C4A8', sort_order: 2 },
+                    { name: '生活', emoji: '🏠', color: '#C8B8A8', sort_order: 3 }
                 ];
 
                 try {
@@ -2433,7 +2432,7 @@
                 try {
                     const [catsData, itemsData] = await Promise.all([
                         apiRequest('/rest/v1/categories?select=*&order=sort_order.asc', { method: 'GET' }, authToken),
-                        apiRequest('/rest/v1/items?select=*,categories(*)&deleted_at=is.null&archived_at=is.null&order=created_at.desc', { method: 'GET' }, authToken)
+                        apiRequest('/rest/v1/items?select=*,categories(*)&archived_at=is.null&order=created_at.desc', { method: 'GET' }, authToken)
                     ]);
 
                     const categories = catsData || [];
@@ -2520,7 +2519,7 @@
                     if (aiResult && !aiResult.title) {
                         aiResult.title = fallbackTitle;
                     }
-                    setAiPreviewResult(aiResult || { title: fallbackTitle, formatType: 'note', folderCategory: '💡灵感' });
+                    setAiPreviewResult(aiResult || { title: fallbackTitle, formatType: 'note', folderCategory: '💼工作' });
                     setAiConfirmContent(content);
                     setShowAIConfirm(true);
                     setShowInput(false);
@@ -2531,7 +2530,7 @@
                         return;
                     }
                     // 即使 AI 失败，也用默认值显示确认页
-                    setAiPreviewResult({ title: content.split('\n')[0].substring(0, 50), formatType: 'note', folderCategory: '💡灵感' });
+                    setAiPreviewResult({ title: content.split('\n')[0].substring(0, 50), formatType: 'note', folderCategory: '💼工作' });
                     setAiConfirmContent(content);
                     setShowAIConfirm(true);
                     setShowInput(false);
@@ -2703,10 +2702,8 @@
             // Delete item
             const handleDeleteItem = async (item) => {
                 try {
-                    // Soft delete
                     await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
-                        method: 'PATCH',
-                        body: JSON.stringify({ deleted_at: new Date().toISOString() })
+                        method: 'DELETE'
                     }, token);
 
                     await loadData(token);
@@ -2720,34 +2717,34 @@
                 }
             };
 
-            // Load trash items
-            const loadTrashItems = async () => {
-                setTrashLoading(true);
+            // Load archived items
+            const loadArchivedItems = async () => {
+                setArchiveLoading(true);
                 try {
-                    const data = await apiRequest('/rest/v1/items?select=*&deleted_at=not.is.null&order=deleted_at.desc', {
+                    const data = await apiRequest('/rest/v1/items?select=*&archived_at=not.is.null&order=archived_at.desc', {
                         method: 'GET'
                     }, token);
-                    setTrashItems(data || []);
+                    setArchivedItems(data || []);
                 } catch (err) {
                     if (err.message === 'JWT_EXPIRED') {
                         handleJWTExpired();
                         return;
                     }
-                    console.error('加载回收站失败:', err);
+                    console.error('加载归档失败:', err);
                 } finally {
-                    setTrashLoading(false);
+                    setArchiveLoading(false);
                 }
             };
 
-            // Restore item from trash
-            const handleRestoreItem = async (item) => {
+            // Unarchive item
+            const handleUnarchiveItem = async (item) => {
                 try {
                     await apiRequest(`/rest/v1/items?id=eq.${item.id}`, {
                         method: 'PATCH',
-                        body: JSON.stringify({ deleted_at: null })
+                        body: JSON.stringify({ archived_at: null, is_auto_archived: false })
                     }, token);
 
-                    await Promise.all([loadData(token), loadTrashItems()]);
+                    await Promise.all([loadData(token), loadArchivedItems()]);
                     showSuccessToast('已恢复');
                 } catch (err) {
                     if (err.message === 'JWT_EXPIRED') {
@@ -3142,7 +3139,7 @@
                             onTabChange={handleTabChange}
                             onInputClick={() => setShowInput(true)}
                             onManageCategories={() => setScreen('categoryManage')}
-                            onOpenTrash={() => { loadTrashItems(); setScreen('trash'); }}
+                            onOpenArchive={() => { loadArchivedItems(); setScreen('archive'); }}
                             autoArchive={autoArchive}
                             onToggleAutoArchive={handleToggleAutoArchive}
                         />
@@ -3160,11 +3157,11 @@
                             onReorder={handleReorderCategories}
                         />
                     )}
-                    {screen === 'trash' && (
-                        <TrashScreen
-                            items={trashItems}
-                            loading={trashLoading}
-                            onRestore={handleRestoreItem}
+                    {screen === 'archive' && (
+                        <ArchiveScreen
+                            items={archivedItems}
+                            loading={archiveLoading}
+                            onRestore={handleUnarchiveItem}
                             onBack={() => setScreen('settings')}
                         />
                     )}
