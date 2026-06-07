@@ -715,11 +715,15 @@
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
             const [isSignUp, setIsSignUp] = useState(false);
+            const [showVerifyHint, setShowVerifyHint] = useState(false);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (!email.trim() || !password) return;
                 await onLogin(email, password, isSignUp);
+                if (isSignUp) {
+                    setShowVerifyHint(true);
+                }
             };
 
             return (
@@ -794,6 +798,26 @@
                     >
                         {isSignUp ? '已有账户？点击登录' : '没有账户？点击注册'}
                     </button>
+
+                    {showVerifyHint && (
+                        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 px-8" onClick={() => { setShowVerifyHint(false); setIsSignUp(false); }}>
+                            <div className="bg-white rounded-3xl p-6 shadow-lg w-full max-w-xs scale-in" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex flex-col items-center text-center">
+                                    <span className="text-5xl mb-4">📧</span>
+                                    <h3 className="text-morandi-text font-bold text-lg mb-2">验证链接已发送</h3>
+                                    <p className="text-morandi-textSecondary text-sm mb-1">我们已向</p>
+                                    <p className="text-morandi-accent font-semibold text-sm mb-1 break-all">{email}</p>
+                                    <p className="text-morandi-textSecondary text-sm mb-5">发送了验证链接，请前往邮箱查收并完成验证。</p>
+                                    <button
+                                        onClick={() => { setShowVerifyHint(false); setIsSignUp(false); }}
+                                        className="w-full py-3 bg-gradient-to-r from-morandi-accent to-morandi-group2 text-white rounded-xl font-semibold"
+                                    >
+                                        知道了
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
