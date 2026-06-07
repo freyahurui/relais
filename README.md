@@ -42,7 +42,7 @@ relais/
 |------|------|
 | 前端 | React 18, Tailwind CSS |
 | 后端 | Supabase (Auth, Database, Edge Functions) |
-| AI | AI 驱动的内容识别与分类 |
+| AI | LLM 驱动的内容识别与分类（deepseek-v4-flash） |
 
 ### 在线体验
 
@@ -88,7 +88,7 @@ relais/
 |-------|-----------|
 | Frontend | React 18, Tailwind CSS |
 | Backend | Supabase (Auth, Database, Edge Functions) |
-| AI | AI-powered content recognition and categorization |
+| AI | LLM-powered content recognition and categorization (deepseek-v4-flash) |
 
 ### Live Demo
 

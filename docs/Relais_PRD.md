@@ -89,8 +89,8 @@ Relais 是一款 AI 增强的智能信息中转站工具，旨在通过智能化
 | 生活相关 | 🏠 生活 | "周末去超市购物清单" |
 
 **AI 技术方案**：
-- **提供商**：OpenAI 兼容 API（通过 openai-next.com 中转）
-- **模型**：gpt-5-mini
+- **提供商**：DeepSeek API
+- **模型**：deepseek-v4-flash
 - **调用方式**：通过 Supabase Edge Functions 代理调用
 - **响应格式**：结构化 JSON（type、category、时间、地点、置信度）
 
