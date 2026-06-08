@@ -10,6 +10,10 @@
 
 随手粘贴，AI 自动分类存放并解析关键信息，灵感、日程、待办各取所需，告别备忘录和聊天框的杂乱存储。
 
+<p align="center">
+  <img src="demo/demo.gif" alt="Relais Demo" width="300">
+</p>
+
 **名称由来**：Relais 源自法语，意为"驿站"或"中继站"，寓意临时存放、各取所需的信息中转体验。
 
 ### 核心特性
@@ -55,6 +59,10 @@ relais/
 Relais — An AI-enhanced smart information relay.
 
 Just paste, and AI automatically categorizes and parses key information. Ideas, schedules, to-dos — each finds its place. Say goodbye to cluttered memos and chat histories.
+
+<p align="center">
+  <img src="demo/demo.gif" alt="Relais Demo" width="300">
+</p>
 
 **Origin**: Relais comes from French, meaning "relay station" or "waystation," symbolizing a temporary storage where information is deposited and retrieved as needed.
 
